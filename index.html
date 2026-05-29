@@ -138,29 +138,6 @@
         // GOOGLE APPS SCRIPT WEB APP URL INTEGRATED SUCCESSFULLY
         const GOOGLE_SHEET_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzobT46fZHj-ID09kPSPnPe4YQ8pa9Z09tQBeIB2Q3vJNZKeRYBct4nW7QXhpBvu096/exec";
 
-        // Gesture Hook for Swipe to Back
-        const useSwipeBack = (onBack) => {
-            const [touchStart, setTouchStart] = useState(null);
-            const [touchEnd, setTouchEnd] = useState(null);
-
-            const onTouchStart = (e) => {
-                setTouchEnd(null);
-                setTouchStart(e.targetTouches[0].clientX);
-            };
-
-            const onTouchMove = (e) => setTouchEnd(e.targetTouches[0].clientX);
-
-            const onTouchEnd = () => {
-                if (!touchStart || !touchEnd) return;
-                const distance = touchStart - touchEnd;
-                if (Math.abs(distance) > 60) {
-                    onBack();
-                }
-            };
-
-            return { onTouchStart, onTouchMove, onTouchEnd };
-        };
-
         // Live Database Synced with Google Sheets (Falls back to Mock Data if URL fails)
         const MOCK_DB = {
             registrations: [
@@ -510,7 +487,6 @@
         };
 
         const SearchPassView = ({ setView, setRegData }) => {
-            const swipeHandlers = useSwipeBack(() => setView('home'));
             const [searchType, setSearchType] = useState('regId');
             const [formData, setFormData] = useState({ regId: '', name: '', phone: '' });
             const [loading, setLoading] = useState(false);
@@ -535,7 +511,7 @@
             const inputClasses = "w-full bg-white border-0 text-brand-text rounded-xl px-6 py-3.5 focus:outline-none focus:ring-4 focus:ring-brand-yellow/50 transition-all font-light text-base shadow-sm";
 
             return (
-                <div {...swipeHandlers} className="max-w-md mx-auto px-4 pt-12 pb-12 animate-fade-in relative z-10 min-h-screen flex flex-col pt-16">
+                <div className="max-w-md mx-auto px-4 pt-12 pb-12 animate-fade-in relative z-10 min-h-screen flex flex-col pt-16">
                     {toast && <Toast {...toast} onClose={() => setToast(null)} />}
 
                     <button onClick={() => setView('home')} className="absolute top-4 left-4 z-50 text-white bg-white/10 hover:bg-white/20 p-2.5 rounded-full backdrop-blur-md border border-white/20 transition-all shadow-md">
@@ -588,8 +564,6 @@
         };
 
         const RegisterView = ({ setView, setRegData }) => {
-            const swipeHandlers = useSwipeBack(() => setView('home'));
-            
             const panchayats = [
                 "Tanur Municipality", "Ozhur", "Ponmundam", "Tanalur", "Niramaruthur", "Cheriyamundam"
             ];
@@ -666,7 +640,7 @@
             const gradeSuffix = formData.category === 'CBSE 10' ? 'A1' : 'A+';
 
             return (
-                <div {...swipeHandlers} className="max-w-2xl mx-auto px-4 pt-14 pb-6 md:py-14 animate-fade-in relative z-10 min-h-screen">
+                <div className="max-w-2xl mx-auto px-4 pt-14 pb-6 md:py-14 animate-fade-in relative z-10 min-h-screen">
                     {toast && <Toast {...toast} onClose={() => setToast(null)} />}
                     
                     <button onClick={() => setView('home')} className="absolute top-4 left-4 z-50 text-white bg-white/10 hover:bg-white/20 p-2.5 rounded-full backdrop-blur-md border border-white/20 transition-all shadow-md">
@@ -779,7 +753,6 @@
             const [toast, setToast] = useState(null);
             const [isSharing, setIsSharing] = useState(false);
             const [isDownloading, setIsDownloading] = useState(false);
-            const swipeHandlers = useSwipeBack(() => setView('home'));
             
             const handleDownloadPNG = async () => {
                 if(isDownloading) return;
@@ -852,7 +825,7 @@
             if (!data) return null;
 
             return (
-                <div {...swipeHandlers} className="max-w-md mx-auto px-4 pt-8 pb-12 animate-fade-in relative z-10 min-h-screen">
+                <div className="max-w-md mx-auto px-4 pt-8 pb-12 animate-fade-in relative z-10 min-h-screen">
                     {toast && <Toast {...toast} onClose={() => setToast(null)} />}
                     
                     <div className="text-center mb-6 pdf-hide text-white">
