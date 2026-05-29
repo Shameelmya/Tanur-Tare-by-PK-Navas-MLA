@@ -53,7 +53,6 @@
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -71,7 +70,7 @@
             color: #1E293B;
             -webkit-font-smoothing: antialiased;
             min-height: 100vh;
-            font-weight: 300; /* Set global font weight to light */
+            font-weight: 300;
         }
 
         /* Override background for admin panel */
@@ -94,7 +93,6 @@
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
         
-        /* Smooth color shifting animation for Register button */
         @keyframes color-pass {
             0% { background-position: 200% center; }
             100% { background-position: -200% center; }
@@ -106,8 +104,25 @@
             color: #0838A8;
             border: none;
         }
+
+        .scan-line {
+            width: 100%;
+            height: 3px;
+            background: #22C55E;
+            position: absolute;
+            top: 0;
+            left: 0;
+            animation: scan 2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+            box-shadow: 0 0 15px 2px rgba(34, 197, 94, 0.6);
+            z-index: 10;
+        }
+        @keyframes scan {
+            0% { top: 0; opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { top: 100%; opacity: 0; }
+        }
         
-        /* Select dropdown arrow customization */
         select {
             appearance: none;
             background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236B7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
@@ -273,7 +288,7 @@
                 </div>
                 {showLogo && (
                     <>
-                        <p className="text-white text-[12px] sm:text-[14px] font-light font-malayalam tracking-wide mb-1 mt-3 opacity-90 leading-none">
+                        <p className="text-white text-[14px] sm:text-[16px] font-bold font-malayalam tracking-wide mb-1 mt-3 opacity-95 leading-tight">
                             പികെ നവാസ് എംഎൽഎ സംഘടിപ്പിക്കുന്ന
                         </p>
                         <div className="w-full flex justify-center mt-2 mb-2">
@@ -286,7 +301,6 @@
 
         const CountdownTimer = () => {
             const calculateTimeLeft = () => {
-                // Event time: June 8, 2026 at 14:00 (2:00 PM) IST
                 const targetDate = new Date('2026-06-08T14:00:00+05:30').getTime();
                 const now = new Date().getTime();
                 const difference = targetDate - now;
@@ -325,9 +339,9 @@
             });
 
             return (
-                <div className="flex gap-2 sm:gap-3 justify-center mb-6 mt-1 w-full max-w-[380px] animate-fade-in">
+                <div className="flex gap-2 sm:gap-3 justify-center mb-6 mt-6 w-full max-w-[380px] animate-fade-in">
                     {timerComponents.length ? timerComponents : (
-                        <div className="bg-white/20 backdrop-blur-md px-6 py-3 rounded-xl border border-white/30">
+                        <div className="bg-white/20 backdrop-blur-md px-6 py-3 rounded-xl border border-white/30 mt-6">
                             <span className="text-brand-yellow font-black uppercase tracking-wider text-sm">Event has started!</span>
                         </div>
                     )}
@@ -337,20 +351,13 @@
 
         // --- Views ---
         const HomeView = ({ setView, setShowPassword, showPassword, handleAdminLogin, password, setPassword }) => {
-            // Calendar config based on the poster details
-            // 2026-06-08 14:00 IST is 2026-06-08 08:30 UTC
             const calendarUrl = "https://calendar.google.com/calendar/render?action=TEMPLATE&text=Stars+of+Tanur+-+%E0%B4%A4%E0%B4%BE%E0%B4%A8%E0%B5%82%E0%B5%BC+%E0%B4%A4%E0%B4%BE%E0%B4%B0%E0%B5%87&dates=20260608T083000Z/20260608T113000Z&details=Join+us+for+the+grand+Stars+of+Tanur+event+organized+by+PK+Navas+MLA.+Honoring+the+winners+of+SSLC,+PLUS+TWO,+LSS,+USS,+NMMS+from+Tanur.&location=Emarald+Auditorium,+Kurukkol+-+https://maps.app.goo.gl/EtN48oEttJG5S7BR6?g_st=aw";
             const mapUrl = "https://maps.app.goo.gl/EtN48oEttJG5S7BR6?g_st=aw";
 
             return (
                 <div className="max-w-md mx-auto px-4 pt-2 pb-8 animate-fade-in flex flex-col items-center min-h-[120vh] relative z-10">
                     
-                    {/* Header */}
-                    <div className="w-full mb-2 mt-4">
-                        <HeaderGraphics showLogo={false} />
-                    </div>
-
-                    {/* Countdown Timer Added Here */}
+                    {/* Countdown Timer Added Here directly */}
                     <CountdownTimer />
 
                     {/* Wrapper ensures everything matches poster width exactly */}
@@ -448,13 +455,16 @@
             const inputClasses = "w-full bg-white border-0 text-brand-text rounded-xl px-6 py-3.5 focus:outline-none focus:ring-4 focus:ring-brand-yellow/50 transition-all font-light text-base shadow-sm";
 
             return (
-                <div {...swipeHandlers} className="max-w-md mx-auto px-4 pt-12 pb-12 animate-fade-in relative z-10 min-h-screen">
+                <div {...swipeHandlers} className="max-w-md mx-auto px-4 pt-12 pb-12 animate-fade-in relative z-10 min-h-screen flex flex-col pt-16">
                     {toast && <Toast {...toast} onClose={() => setToast(null)} />}
+
+                    <button onClick={() => setView('home')} className="absolute top-4 left-4 z-50 text-white bg-white/10 hover:bg-white/20 p-2.5 rounded-full backdrop-blur-md border border-white/20 transition-all shadow-md">
+                        <i className="ph-bold ph-arrow-left text-xl"></i>
+                    </button>
 
                     <div className="text-center mb-8">
                         <h2 className="text-3xl font-black font-malayalam text-white tracking-tight mb-2">Get Your Pass</h2>
                         <p className="text-white/80 text-sm font-light">Search to download your entry pass.</p>
-                        <p className="text-white/50 text-[10px] mt-2">Swipe horizontally to go back</p>
                     </div>
 
                     <div className="bg-white/10 backdrop-blur-md p-6 rounded-2xl border border-white/20 shadow-xl">
@@ -577,13 +587,16 @@
             const aPlusOptions = Array.from({length: maxAPlus}, (_, i) => i + 1);
 
             return (
-                <div {...swipeHandlers} className="max-w-2xl mx-auto px-4 pt-6 pb-6 md:py-6 animate-fade-in relative z-10 min-h-screen">
+                <div {...swipeHandlers} className="max-w-2xl mx-auto px-4 pt-14 pb-6 md:py-14 animate-fade-in relative z-10 min-h-screen">
                     {toast && <Toast {...toast} onClose={() => setToast(null)} />}
                     
-                    <HeaderGraphics showLogo={true} />
-                    <p className="text-center text-white/50 text-[10px] mt-0 mb-4 animate-pulse">Swipe left or right to go back</p>
+                    <button onClick={() => setView('home')} className="absolute top-4 left-4 z-50 text-white bg-white/10 hover:bg-white/20 p-2.5 rounded-full backdrop-blur-md border border-white/20 transition-all shadow-md">
+                        <i className="ph-bold ph-arrow-left text-xl"></i>
+                    </button>
 
-                    <form onSubmit={handleSubmit} className="w-full mt-2">
+                    <HeaderGraphics showLogo={true} />
+
+                    <form onSubmit={handleSubmit} className="w-full mt-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6 mt-0">
                             <div className="md:col-span-2">
                                 <label className={labelClasses}>Student Name</label>
@@ -689,21 +702,31 @@
             const passRef = useRef(null);
             const [toast, setToast] = useState(null);
             const [isSharing, setIsSharing] = useState(false);
+            const [isDownloading, setIsDownloading] = useState(false);
             const swipeHandlers = useSwipeBack(() => setView('home'));
             
-            const handleDownloadPDF = () => {
-                const element = passRef.current;
-                element.classList.add('is-printing');
-                const opt = {
-                    margin: 0,
-                    filename: `${data.regId}_TanurTare.pdf`,
-                    image: { type: 'jpeg', quality: 1 },
-                    html2canvas: { scale: 3, useCORS: true, backgroundColor: '#0838A8' },
-                    jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
-                };
-                html2pdf().set(opt).from(element).save().then(() => {
-                    element.classList.remove('is-printing');
-                });
+            const handleDownloadPNG = async () => {
+                if(isDownloading) return;
+                setIsDownloading(true);
+                try {
+                    await document.fonts.ready;
+                    const canvas = await html2canvas(passRef.current, {
+                        scale: 3, 
+                        backgroundColor: '#0838A8',
+                        useCORS: true,
+                        logging: false
+                    });
+                    
+                    const link = document.createElement('a');
+                    link.download = `TanurTare_${data.regId}.png`;
+                    link.href = canvas.toDataURL('image/png');
+                    link.click();
+                    setToast({ message: 'Entry pass saved to gallery successfully!', type: 'success' });
+                } catch (error) {
+                    setToast({ message: 'Failed to download image.', type: 'error' });
+                } finally {
+                    setIsDownloading(false);
+                }
             };
 
             const handleShareWhatsApp = async () => {
@@ -714,7 +737,7 @@
                     await document.fonts.ready;
                     const canvas = await html2canvas(passRef.current, {
                         scale: 2,
-                        backgroundColor: '#0A4ED5',
+                        backgroundColor: '#0838A8',
                         useCORS: true,
                         logging: false 
                     });
@@ -761,7 +784,6 @@
                             <i className="ph-fill ph-check-circle text-4xl"></i>
                         </div>
                         <h2 className="text-2xl font-bold mb-1">Registration Complete!</h2>
-                        <p className="text-white/50 text-[10px] mt-2">Swipe horizontally to go to home</p>
                     </div>
 
                     <div ref={passRef} className="pass-container rounded-2xl shadow-2xl overflow-hidden mb-6">
@@ -801,14 +823,26 @@
                         </div>
                     </div>
 
-                    <div className="flex flex-col sm:flex-row justify-center gap-3 pdf-hide">
-                        <Button onClick={handleShareWhatsApp} className="w-full bg-[#25D366] hover:bg-[#128C7E] text-white font-bold" disabled={isSharing}>
-                            {isSharing ? <i className="ph-fill ph-spinner-gap animate-spin text-2xl"></i> : <i className="ph-fill ph-whatsapp-logo text-2xl"></i>}
-                            {isSharing ? 'Preparing...' : 'Share Pass'}
-                        </Button>
-                        <Button onClick={handleDownloadPDF} variant="secondary" className="w-full font-bold">
-                            <i className="ph-bold ph-download-simple text-xl"></i> Save PDF
-                        </Button>
+                    <div className="flex flex-col gap-3 pdf-hide">
+                        <div className="flex flex-col sm:flex-row gap-3">
+                            <Button onClick={handleShareWhatsApp} className="w-full bg-[#25D366] hover:bg-brand-yellow text-white hover:text-white font-bold transition-colors duration-300" disabled={isSharing}>
+                                {isSharing ? <i className="ph-fill ph-spinner-gap animate-spin text-2xl"></i> : <i className="ph-fill ph-whatsapp-logo text-2xl"></i>}
+                                {isSharing ? 'Preparing...' : 'Share Pass'}
+                            </Button>
+                            <Button onClick={handleDownloadPNG} variant="secondary" className="w-full font-bold" disabled={isDownloading}>
+                                {isDownloading ? <i className="ph-fill ph-spinner-gap animate-spin text-xl"></i> : <i className="ph-bold ph-download-simple text-xl"></i>}
+                                {isDownloading ? 'Saving...' : 'Save Image'}
+                            </Button>
+                        </div>
+                        
+                        <div className="flex flex-row justify-between gap-3 mt-4 border-t border-white/20 pt-4">
+                            <Button onClick={() => setView('home')} variant="secondary" className="w-full text-sm font-bold bg-white/10 text-white hover:bg-white/20 border-none shadow-none">
+                                <i className="ph-bold ph-house text-lg"></i> Go Home
+                            </Button>
+                            <Button onClick={() => setView('register')} variant="secondary" className="w-full text-sm font-bold bg-white/10 text-brand-yellow hover:bg-white/20 border-none shadow-none">
+                                <i className="ph-bold ph-user-plus text-lg"></i> Register New
+                            </Button>
+                        </div>
                     </div>
                 </div>
             );
@@ -959,28 +993,49 @@
             const [query, setQuery] = useState('');
             const [toast, setToast] = useState(null);
             const [scannedStudent, setScannedStudent] = useState(null);
+            const [isScanning, setIsScanning] = useState(false);
             const scannerRef = useRef(null);
             const isProcessingRef = useRef(false);
 
-            useEffect(() => {
-                const scanner = new Html5QrcodeScanner("reader", { 
-                    fps: 10, 
-                    qrbox: {width: 250, height: 250},
-                    supportedScanTypes: [0]
-                }, false);
-                scannerRef.current = scanner;
-                
-                scanner.render((decodedText) => {
-                    if (!isProcessingRef.current) {
-                        isProcessingRef.current = true;
-                        handleMark(decodedText);
-                    }
-                }, (error) => {});
+            const startScanner = async () => {
+                if (isScanning) return;
+                try {
+                    const html5QrCode = new Html5Qrcode("reader");
+                    scannerRef.current = html5QrCode;
+                    await html5QrCode.start(
+                        { facingMode: "environment" }, // Forces rear camera
+                        { fps: 10, qrbox: { width: 250, height: 250 } },
+                        (decodedText) => {
+                            if (!isProcessingRef.current) {
+                                isProcessingRef.current = true;
+                                handleMark(decodedText);
+                            }
+                        }
+                    );
+                    setIsScanning(true);
+                } catch (err) {
+                    setToast({ message: "Camera access failed. Please grant permissions.", type: "error" });
+                }
+            };
 
+            const stopScanner = async () => {
+                if (scannerRef.current && isScanning) {
+                    try {
+                        await scannerRef.current.stop();
+                        setIsScanning(false);
+                    } catch (err) {
+                        console.error("Failed to stop scanner", err);
+                    }
+                }
+            };
+
+            useEffect(() => {
                 return () => {
-                    if (scannerRef.current) scannerRef.current.clear();
+                    if (scannerRef.current && isScanning) {
+                        scannerRef.current.stop().catch(console.error);
+                    }
                 };
-            }, [data]);
+            }, [isScanning]);
 
             const handleMark = (searchStr) => {
                 const reg = data.find(r => r.regId === searchStr || r.phone === searchStr);
@@ -1013,11 +1068,45 @@
                     <h2 className="text-2xl font-black text-brand-text mb-6">Attendance Scanner</h2>
                     
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                            <h3 className="font-bold mb-4 text-brand-text"><i className="ph-bold ph-camera"></i> Scan QR Code</h3>
-                            <div id="reader" className="rounded-xl overflow-hidden border-2 border-gray-100 relative"></div>
-                            {isProcessingRef.current && !scannedStudent && (
-                                <p className="text-center text-sm text-brand-blue font-bold mt-2 animate-pulse">Processing...</p>
+                        {/* High-end Professional Scanner UI */}
+                        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center">
+                            <h3 className="font-bold mb-6 text-brand-text self-start"><i className="ph-bold ph-camera"></i> Live QR Scan</h3>
+                            
+                            <div className="bg-gray-900 rounded-2xl overflow-hidden relative border-4 border-gray-800 shadow-inner w-full max-w-sm aspect-square flex items-center justify-center">
+                                {isScanning ? (
+                                    <>
+                                        <div id="reader" className="w-full h-full object-cover"></div>
+                                        <div className="absolute inset-0 pointer-events-none">
+                                            <div className="scan-line"></div>
+                                            {/* Corner Accents */}
+                                            <div className="absolute top-4 left-4 w-8 h-8 border-t-4 border-l-4 border-brand-yellow rounded-tl-lg"></div>
+                                            <div className="absolute top-4 right-4 w-8 h-8 border-t-4 border-r-4 border-brand-yellow rounded-tr-lg"></div>
+                                            <div className="absolute bottom-4 left-4 w-8 h-8 border-b-4 border-l-4 border-brand-yellow rounded-bl-lg"></div>
+                                            <div className="absolute bottom-4 right-4 w-8 h-8 border-b-4 border-r-4 border-brand-yellow rounded-br-lg"></div>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <div className="text-center p-6 text-gray-400">
+                                        <i className="ph-bold ph-qr-code text-6xl mb-3 opacity-50"></i>
+                                        <p className="text-sm font-bold uppercase tracking-widest text-gray-500">Scanner Inactive</p>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="mt-6 w-full flex justify-center">
+                                {!isScanning ? (
+                                    <Button onClick={startScanner} className="w-full max-w-sm py-4 text-lg bg-[#0838A8] text-white hover:bg-brand-lightBlue rounded-xl shadow-xl shadow-blue-200">
+                                        <i className="ph-bold ph-scan text-2xl"></i> Start Scanning
+                                    </Button>
+                                ) : (
+                                    <Button onClick={stopScanner} variant="secondary" className="w-full max-w-sm py-4 text-lg text-red-500 hover:bg-red-50 rounded-xl">
+                                        <i className="ph-bold ph-stop-circle text-2xl"></i> Stop Camera
+                                    </Button>
+                                )}
+                            </div>
+                            
+                            {isProcessingRef.current && !scannedStudent && isScanning && (
+                                <p className="text-center text-sm text-brand-success font-bold mt-4 animate-pulse">Processing code...</p>
                             )}
                         </div>
 
@@ -1036,7 +1125,7 @@
                                     placeholder="Enter Reg ID (e.g. TT10-001) or Phone" 
                                     className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3.5 mb-4 font-bold text-center uppercase focus:outline-none focus:ring-2 focus:ring-brand-blue"
                                 />
-                                <Button type="submit" className="w-full py-3.5 text-base font-bold">Find Student</Button>
+                                <Button type="submit" className="w-full py-3.5 text-base font-bold bg-[#0838A8] text-white shadow-xl shadow-blue-200">Find Student</Button>
                             </form>
                             
                             <div className="mt-8">
