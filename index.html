@@ -357,29 +357,35 @@
             return (
                 <div className="max-w-md mx-auto px-4 pt-2 pb-8 animate-fade-in flex flex-col items-center min-h-[120vh] relative z-10">
                     
-                    {/* Countdown Timer Added Here directly */}
+                    {/* Countdown Timer */}
                     <CountdownTimer />
 
                     {/* Wrapper ensures everything matches poster width exactly */}
                     <div className="w-full max-w-[380px] flex flex-col items-center mt-0">
                         
-                        {/* Poster - Bigger */}
-                        <div className="w-full aspect-[4/5] rounded-2xl overflow-hidden shadow-2xl mb-8 border-2 border-white/20">
+                        {/* Poster - Clickable */}
+                        <div 
+                            onClick={() => setView('register')}
+                            className="w-full aspect-[4/5] rounded-2xl overflow-hidden shadow-2xl mb-8 border-2 border-white/20 cursor-pointer hover:border-brand-yellow transition-colors relative group"
+                        >
                             <img 
                                 src="src/poster.jpeg" 
                                 onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/800x1000/0838A8/F6D10D?text=Stars+of+Tanur+Poster'; }}
                                 alt="Stars of Tanur Poster" 
-                                className="w-full h-full object-cover" 
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
                             />
+                            <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                <span className="bg-brand-yellow text-brand-blue font-bold px-4 py-2 rounded-full shadow-lg">Tap to Register</span>
+                            </div>
                         </div>
 
-                        {/* Register Button - Matches Poster Width */}
+                        {/* Register Button */}
                         <button onClick={() => setView('register')} className="btn-animated w-full text-lg py-4 mb-4 rounded-xl font-black shadow-[0_8px_30px_rgb(246,209,13,0.3)] hover:shadow-[0_8px_30px_rgb(246,209,13,0.5)] transition-transform hover:scale-[1.02] flex items-center justify-center gap-2">
                             <i className="ph-bold ph-pencil-simple text-xl"></i> Register Now
                         </button>
 
                         {/* Map and Calendar Action Buttons */}
-                        <div className="grid grid-cols-2 gap-3 w-full mb-8">
+                        <div className="grid grid-cols-2 gap-3 w-full mb-3">
                             <a 
                                 href={calendarUrl} 
                                 target="_blank" 
@@ -515,7 +521,7 @@
             ];
 
             const [formData, setFormData] = useState({
-                name: '', gender: '', guardian: '', schoolName: '', houseName: '', place: '', postOffice: '', pinCode: '', 
+                name: '', dob: '', gender: '', guardian: '', schoolName: '', houseName: '', place: '', postOffice: '', pinCode: '', 
                 panchayat: '', ward: '', phone: '', whatsapp: '', category: '', aPlus: ''
             });
             const [sameAsPhone, setSameAsPhone] = useState(false);
@@ -603,14 +609,19 @@
                                 <input type="text" name="name" required value={formData.name} onChange={handleChange} className={inputClasses} placeholder="Enter full name" />
                             </div>
                             <div>
+                                <label className={labelClasses}>Date of Birth</label>
+                                <input type="date" name="dob" required value={formData.dob} onChange={handleChange} className={inputClasses} />
+                            </div>
+                            <div>
                                 <label className={labelClasses}>Gender</label>
                                 <select name="gender" required value={formData.gender} onChange={handleChange} className={inputClasses}>
                                     <option value="" disabled>Select Gender</option>
                                     <option value="Male">Male</option>
                                     <option value="Female">Female</option>
+                                    <option value="Other">Other</option>
                                 </select>
                             </div>
-                            <div>
+                            <div className="md:col-span-2">
                                 <label className={labelClasses}>Guardian Name</label>
                                 <input type="text" name="guardian" required value={formData.guardian} onChange={handleChange} className={inputClasses} placeholder="Parent/Guardian" />
                             </div>
@@ -821,6 +832,13 @@
                                 </div>
                             </div>
                         </div>
+                    </div>
+
+                    {/* Thank You Note added here */}
+                    <div className="text-center mb-8 pdf-hide text-white/90">
+                        <p className="font-malayalam text-lg font-semibold mb-1">രജിസ്റ്റർ ചെയ്തതിന് നന്ദി!</p>
+                        <p className="text-sm font-light text-white/70">Thank you for registering!</p>
+                        <p className="mt-2 font-bold text-brand-yellow">- പി.കെ നവാസ് എംഎൽഎ (P.K Navas MLA)</p>
                     </div>
 
                     <div className="flex flex-col gap-3 pdf-hide">
@@ -1072,7 +1090,11 @@
                         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center">
                             <h3 className="font-bold mb-6 text-brand-text self-start"><i className="ph-bold ph-camera"></i> Live QR Scan</h3>
                             
-                            <div className="bg-gray-900 rounded-2xl overflow-hidden relative border-4 border-gray-800 shadow-inner w-full max-w-sm aspect-square flex items-center justify-center">
+                            {/* Make the inactive scanner clickable to start */}
+                            <div 
+                                onClick={!isScanning ? startScanner : undefined}
+                                className={`bg-gray-900 rounded-2xl overflow-hidden relative border-4 border-gray-800 shadow-inner w-full max-w-sm aspect-square flex items-center justify-center ${!isScanning ? 'cursor-pointer hover:border-brand-yellow/50 transition-colors' : ''}`}
+                            >
                                 {isScanning ? (
                                     <>
                                         <div id="reader" className="w-full h-full object-cover"></div>
@@ -1086,9 +1108,10 @@
                                         </div>
                                     </>
                                 ) : (
-                                    <div className="text-center p-6 text-gray-400">
+                                    <div className="text-center p-6 text-gray-400 pointer-events-none">
                                         <i className="ph-bold ph-qr-code text-6xl mb-3 opacity-50"></i>
-                                        <p className="text-sm font-bold uppercase tracking-widest text-gray-500">Scanner Inactive</p>
+                                        <p className="text-sm font-bold uppercase tracking-widest text-gray-500 mb-2">Scanner Inactive</p>
+                                        <p className="text-xs text-brand-yellow font-bold">Tap Here to Scan Now</p>
                                     </div>
                                 )}
                             </div>
@@ -1096,7 +1119,7 @@
                             <div className="mt-6 w-full flex justify-center">
                                 {!isScanning ? (
                                     <Button onClick={startScanner} className="w-full max-w-sm py-4 text-lg bg-[#0838A8] text-white hover:bg-brand-lightBlue rounded-xl shadow-xl shadow-blue-200">
-                                        <i className="ph-bold ph-scan text-2xl"></i> Start Scanning
+                                        <i className="ph-bold ph-scan text-2xl"></i> Scan Now
                                     </Button>
                                 ) : (
                                     <Button onClick={stopScanner} variant="secondary" className="w-full max-w-sm py-4 text-lg text-red-500 hover:bg-red-50 rounded-xl">
@@ -1246,6 +1269,11 @@
             const [adminTab, setAdminTab] = useState('dashboard');
             const [showPassword, setShowPassword] = useState(false);
             const [password, setPassword] = useState('');
+
+            // Scroll to top whenever the view changes (e.g. from home to admin)
+            useEffect(() => {
+                window.scrollTo(0, 0);
+            }, [view]);
 
             const fetchAdminData = async () => {
                 const data = await MOCK_DB.getRegistrations();
