@@ -60,7 +60,6 @@
     <!-- Custom Styles -->
     <style>
         body {
-            /* Pure Blue Gradient with subtle SVG noise texture */
             background-color: #0838A8;
             background-image: 
                 url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E"),
@@ -72,7 +71,6 @@
             font-weight: 300;
         }
 
-        /* Override background for admin panel */
         .admin-layout {
             background: #F8FAFC !important;
             background-image: none !important;
@@ -135,10 +133,12 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        // --- STREAMING_CHUNK: Initializing mock database layer... ---
         const { useState, useEffect, useRef, useMemo } = React;
 
-        // --- Gesture Hook for Swipe to Back ---
+        // PASTE YOUR DEPLOYED GOOGLE APPS SCRIPT WEB APP URL HERE:
+        const GOOGLE_SHEET_WEB_APP_URL = "PASTE_YOUR_COPIED_WEB_APP_URL_HERE";
+
+        // Gesture Hook for Swipe to Back
         const useSwipeBack = (onBack) => {
             const [touchStart, setTouchStart] = useState(null);
             const [touchEnd, setTouchEnd] = useState(null);
@@ -161,7 +161,7 @@
             return { onTouchStart, onTouchMove, onTouchEnd };
         };
 
-        // --- Mock Database (In-Memory with Mock Starter Data) ---
+        // Live Database Synced with Google Sheets (Falls back to Mock Data if URL is not pasted)
         const MOCK_DB = {
             registrations: [
                 {
@@ -173,8 +173,6 @@
                     schoolName: "Devadhar Government Higher Secondary School, Tanur",
                     houseName: "Kallan House",
                     place: "Rayirimangalam",
-                    postOffice: "Tanur",
-                    pinCode: "676302",
                     panchayat: "Tanur Municipality",
                     ward: "12",
                     phone: "9876543210",
@@ -183,110 +181,143 @@
                     aPlus: "10",
                     status: "Pending",
                     timestamp: new Date().toISOString()
-                },
-                {
-                    regId: "TT12-001",
-                    name: "Anjana Krishnan",
-                    dob: "2008-09-24",
-                    gender: "Female",
-                    guardian: "Radhakrishnan P",
-                    schoolName: "Government Regional Fisheries Technical High School, Tanur",
-                    houseName: "Prarthana",
-                    place: "Kottakkal Road",
-                    postOffice: "Tanur",
-                    pinCode: "676302",
-                    panchayat: "Tanalur",
-                    ward: "4",
-                    phone: "9012345678",
-                    whatsapp: "9012345678",
-                    category: "Plus Two",
-                    aPlus: "6",
-                    status: "Attended",
-                    attendanceTime: new Date().toISOString(),
-                    timestamp: new Date().toISOString()
                 }
             ],
-            counters: { 'SSLC': 1, 'Plus Two': 1, 'LSS': 0, 'USS': 0, 'NMMS': 0, 'CBSE 10': 0 },
+            counters: { 'SSLC': 1, 'Plus Two': 0, 'LSS': 0, 'USS': 0, 'NMMS': 0, 'CBSE 10': 0 },
             
             async saveRegistration(data) {
-                return new Promise((resolve) => {
-                    setTimeout(() => {
-                        this.counters[data.category]++;
-                        const idStr = String(this.counters[data.category]).padStart(3, '0');
-                        
-                        let prefix = '';
-                        if(data.category === 'SSLC') prefix = 'TT10';
-                        else if(data.category === 'Plus Two') prefix = 'TT12';
-                        else if(data.category === 'LSS') prefix = 'TTL';
-                        else if(data.category === 'USS') prefix = 'TTU';
-                        else if(data.category === 'NMMS') prefix = 'TTN';
-                        else if(data.category === 'CBSE 10') prefix = 'TTC';
-                        
-                        const newReg = {
-                            ...data,
-                            regId: `${prefix}-${idStr}`,
-                            timestamp: new Date().toISOString(),
-                            status: 'Pending'
-                        };
-                        this.registrations.unshift(newReg);
-                        resolve(newReg);
-                    }, 500);
-                });
+                this.counters[data.category] = (this.counters[data.category] || 0) + 1;
+                const idStr = String(this.counters[data.category]).padStart(3, '0');
+                
+                let prefix = '';
+                if(data.category === 'SSLC') prefix = 'TT10';
+                else if(data.category === 'Plus Two') prefix = 'TT12';
+                else if(data.category === 'LSS') prefix = 'TTL';
+                else if(data.category === 'USS') prefix = 'TTU';
+                else if(data.category === 'NMMS') prefix = 'TTN';
+                else if(data.category === 'CBSE 10') prefix = 'TTC';
+                
+                const newReg = {
+                    ...data,
+                    regId: `${prefix}-${idStr}`,
+                    timestamp: new Date().toISOString(),
+                    status: 'Pending',
+                    action: 'create'
+                };
+
+                if (GOOGLE_SHEET_WEB_APP_URL && GOOGLE_SHEET_WEB_APP_URL.startsWith("http")) {
+                    try {
+                        await fetch(GOOGLE_SHEET_WEB_APP_URL, {
+                            method: "POST",
+                            body: JSON.stringify(newReg)
+                        });
+                    } catch (e) {
+                        console.warn("Unable to perform network sync, recording locally.", e);
+                    }
+                }
+                
+                delete newReg.action;
+                this.registrations.unshift(newReg);
+                return newReg;
             },
             
             async getRegistrations() {
-                return new Promise(resolve => setTimeout(() => resolve([...this.registrations]), 300));
+                if (GOOGLE_SHEET_WEB_APP_URL && GOOGLE_SHEET_WEB_APP_URL.startsWith("http")) {
+                    try {
+                        const response = await fetch(GOOGLE_SHEET_WEB_APP_URL);
+                        const serverData = await response.json();
+                        if (Array.isArray(serverData)) {
+                            this.registrations = serverData;
+                            
+                            // Re-calculate the registration category counters dynamically from sheet data
+                            const freshCounters = { 'SSLC': 0, 'Plus Two': 0, 'LSS': 0, 'USS': 0, 'NMMS': 0, 'CBSE 10': 0 };
+                            serverData.forEach(item => {
+                                if (freshCounters[item.category] !== undefined) {
+                                    freshCounters[item.category]++;
+                                }
+                            });
+                            this.counters = freshCounters;
+                        }
+                    } catch (e) {
+                        console.error("Failed to read database rows from Google Sheet", e);
+                    }
+                }
+                return [...this.registrations];
             },
 
             async searchRegistration(criteria) {
-                return new Promise(resolve => {
-                    setTimeout(() => {
-                        let result = null;
-                        if (criteria.regId) {
-                            result = this.registrations.find(r => r.regId.toLowerCase() === criteria.regId.toLowerCase());
-                        } else if (criteria.name && criteria.phone) {
-                            result = this.registrations.find(r => 
-                                r.name.toLowerCase().includes(criteria.name.toLowerCase()) && 
-                                r.phone === criteria.phone
-                            );
-                        }
-                        resolve(result);
-                    }, 300);
-                });
+                const dataset = await this.getRegistrations();
+                if (criteria.regId) {
+                    return dataset.find(r => String(r.regId).toLowerCase() === criteria.regId.toLowerCase());
+                } else if (criteria.name && criteria.phone) {
+                    return dataset.find(r => 
+                        String(r.name).toLowerCase().includes(criteria.name.toLowerCase()) && 
+                        String(r.phone) === criteria.phone
+                    );
+                }
+                return null;
             },
 
             async markAttended(regIds) {
-                return new Promise(resolve => {
-                    setTimeout(() => {
-                        const time = new Date().toISOString();
-                        this.registrations = this.registrations.map(r => {
-                            if (regIds.includes(r.regId)) {
-                                return { ...r, status: 'Attended', attendanceTime: time };
-                            }
-                            return r;
-                        });
-                        resolve(true);
-                    }, 300);
-                });
+                const time = new Date().toISOString();
+                for (let id of regIds) {
+                    if (GOOGLE_SHEET_WEB_APP_URL && GOOGLE_SHEET_WEB_APP_URL.startsWith("http")) {
+                        try {
+                            await fetch(GOOGLE_SHEET_WEB_APP_URL, {
+                                method: "POST",
+                                body: JSON.stringify({
+                                    action: "updateStatus",
+                                    regId: id,
+                                    status: "Attended",
+                                    attendanceTime: time
+                                })
+                            });
+                        } catch (e) {
+                            console.error("Status Sync Failed", e);
+                        }
+                    }
+                    this.registrations = this.registrations.map(r => {
+                        if (r.regId === id) {
+                            return { ...r, status: 'Attended', attendanceTime: time };
+                        }
+                        return r;
+                    });
+                }
+                return true;
             },
 
             async toggleStatus(regId) {
-                return new Promise(resolve => {
-                    setTimeout(() => {
-                        this.registrations = this.registrations.map(r => {
-                            if (r.regId === regId) {
-                                return { ...r, status: r.status === 'Attended' ? 'Pending' : 'Attended' };
-                            }
-                            return r;
+                const original = this.registrations.find(r => r.regId === regId);
+                if (!original) return false;
+                const nextStatus = original.status === 'Attended' ? 'Pending' : 'Attended';
+                const time = nextStatus === 'Attended' ? new Date().toISOString() : '';
+
+                if (GOOGLE_SHEET_WEB_APP_URL && GOOGLE_SHEET_WEB_APP_URL.startsWith("http")) {
+                    try {
+                        await fetch(GOOGLE_SHEET_WEB_APP_URL, {
+                            method: "POST",
+                            body: JSON.stringify({
+                                action: "updateStatus",
+                                regId: regId,
+                                status: nextStatus,
+                                attendanceTime: time
+                            })
                         });
-                        resolve(true);
-                    }, 100);
+                    } catch (e) {
+                        console.error("Status Sync Failed", e);
+                    }
+                }
+
+                this.registrations = this.registrations.map(r => {
+                    if (r.regId === regId) {
+                        return { ...r, status: nextStatus, attendanceTime: time };
+                    }
+                    return r;
                 });
+                return true;
             }
         };
 
-        // --- STREAMING_CHUNK: Defining reusable helper components... ---
-        // --- Shared Components ---
         const Toast = ({ message, type, onClose }) => {
             useEffect(() => {
                 const timer = setTimeout(onClose, 4000);
@@ -339,7 +370,6 @@
             return <canvas ref={canvasRef} className="rounded-xl shadow-sm border-4 border-white"></canvas>;
         };
 
-        // --- STREAMING_CHUNK: Structuring layout and event timer... ---
         const HeaderGraphics = ({ showLogo = true }) => (
             <div className="text-center mb-4 flex flex-col items-center w-full">
                 <div className="w-[85%] sm:w-[80%] max-w-[400px] flex justify-center mb-0 mt-2">
@@ -408,22 +438,15 @@
             );
         };
 
-        // --- STREAMING_CHUNK: Constructing the home page and search views... ---
-        // --- Views ---
         const HomeView = ({ setView, setShowPassword, showPassword, handleAdminLogin, password, setPassword, errorMsg }) => {
             const calendarUrl = "https://calendar.google.com/calendar/render?action=TEMPLATE&text=Stars+of+Tanur+-+%E0%B4%A4%E0%B4%BE%E0%B4%A8%E0%B5%82%E0%B5%BC+%E0%B4%A4%E0%B4%BE%E0%B4%B0%E0%B5%87&dates=20260608T083000Z/20260608T113000Z&details=Join+us+for+the+grand+Stars+of+Tanur+event+organized+by+PK+Navas+MLA.+Honoring+the+winners+of+SSLC,+PLUS+TWO,+LSS,+USS,+NMMS,+CBSE+10+from+Tanur.&location=Emarald+Auditorium,+Kurukkol+-+https://maps.app.goo.gl/EtN48oEttJG5S7BR6?g_st=aw";
             const mapUrl = "https://maps.app.goo.gl/EtN48oEttJG5S7BR6?g_st=aw";
 
             return (
                 <div className="max-w-md mx-auto px-4 pt-2 pb-8 animate-fade-in flex flex-col items-center min-h-[120vh] relative z-10">
-                    
-                    {/* Countdown Timer */}
                     <CountdownTimer />
 
-                    {/* Wrapper ensures everything matches poster width exactly */}
                     <div className="w-full max-w-[380px] flex flex-col items-center mt-0">
-                        
-                        {/* Poster - Clickable */}
                         <div 
                             onClick={() => setView('register')}
                             className="w-full aspect-[4/5] rounded-2xl overflow-hidden shadow-2xl mb-8 border-2 border-white/20 cursor-pointer hover:border-brand-yellow transition-colors relative group"
@@ -439,38 +462,24 @@
                             </div>
                         </div>
 
-                        {/* Register Button */}
                         <button onClick={() => setView('register')} className="btn-animated w-full text-lg py-4 mb-4 rounded-xl font-black shadow-[0_8px_30px_rgb(246,209,13,0.3)] hover:shadow-[0_8px_30px_rgb(246,209,13,0.5)] transition-transform hover:scale-[1.02] flex items-center justify-center gap-2">
                             <i className="ph-bold ph-pencil-simple text-xl"></i> Register Now
                         </button>
 
-                        {/* Map and Calendar Action Buttons */}
                         <div className="grid grid-cols-2 gap-3 w-full mb-3">
-                            <a 
-                                href={calendarUrl} 
-                                target="_blank" 
-                                rel="noopener noreferrer" 
-                                className="bg-white/10 border border-white/30 text-white hover:bg-white/20 py-3.5 rounded-xl font-bold transition-colors flex items-center justify-center gap-2 backdrop-blur-sm text-xs text-center shadow-lg"
-                            >
+                            <a href={calendarUrl} target="_blank" rel="noopener noreferrer" className="bg-white/10 border border-white/30 text-white hover:bg-white/20 py-3.5 rounded-xl font-bold transition-colors flex items-center justify-center gap-2 backdrop-blur-sm text-xs text-center shadow-lg">
                                 <i className="ph-bold ph-calendar-plus text-lg"></i> Save Event
                             </a>
-                            <a 
-                                href={mapUrl} 
-                                target="_blank" 
-                                rel="noopener noreferrer" 
-                                className="bg-white/10 border border-white/30 text-white hover:bg-white/20 py-3.5 rounded-xl font-bold transition-colors flex items-center justify-center gap-2 backdrop-blur-sm text-xs text-center shadow-lg"
-                            >
+                            <a href={mapUrl} target="_blank" rel="noopener noreferrer" className="bg-white/10 border border-white/30 text-white hover:bg-white/20 py-3.5 rounded-xl font-bold transition-colors flex items-center justify-center gap-2 backdrop-blur-sm text-xs text-center shadow-lg">
                                 <i className="ph-bold ph-map-pin text-lg text-brand-yellow"></i> View Map
                             </a>
                         </div>
 
-                        {/* Search Pass Link */}
                         <button onClick={() => setView('search_pass')} className="text-white/80 hover:text-white font-light text-xs transition-colors flex items-center gap-1.5 border-b border-white/30 pb-0.5 mt-2">
                             Already registered? Get entry pass now <i className="ph-bold ph-arrow-right"></i>
                         </button>
                     </div>
 
-                    {/* Admin Access Footer */}
                     <footer className="mt-auto pt-48 pb-4 w-full flex flex-col items-center">
                         {showPassword ? (
                             <form onSubmit={handleAdminLogin} className="flex flex-col gap-2 bg-white/10 p-3 rounded-xl backdrop-blur-md border border-white/20 animate-fade-in w-full max-w-[280px]">
@@ -557,7 +566,7 @@
                             ) : (
                                 <div className="animate-fade-in space-y-4">
                                     <div>
-                                        <label className="block text-sm font-light text-white/90 mb-1.5 ml-1">Student Name (Partial match works)</label>
+                                        <label className="block text-sm font-light text-white/90 mb-1.5 ml-1">Student Name</label>
                                         <input type="text" required value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} placeholder="Enter name" className={inputClasses} />
                                     </div>
                                     <div>
@@ -578,7 +587,6 @@
             );
         };
 
-        // --- STREAMING_CHUNK: Coding the registration form controller... ---
         const RegisterView = ({ setView, setRegData }) => {
             const swipeHandlers = useSwipeBack(() => setView('home'));
             
@@ -587,7 +595,7 @@
             ];
 
             const [formData, setFormData] = useState({
-                name: '', dob: '', gender: '', guardian: '', schoolName: '', houseName: '', place: '', postOffice: '', pinCode: '', 
+                name: '', dob: '', gender: '', guardian: '', schoolName: '', houseName: '', place: '', 
                 panchayat: '', ward: '', phone: '', whatsapp: '', category: '', aPlus: ''
             });
             const [sameAsPhone, setSameAsPhone] = useState(false);
@@ -597,20 +605,16 @@
 
             const handleChange = (e) => {
                 const { name, value } = e.target;
-                
                 setFormData(prev => {
                     const newData = { ...prev, [name]: value };
-                    
                     if (name === 'phone' && sameAsPhone) {
                         newData.whatsapp = value;
                     }
-                    
                     if (name === 'category') {
-                        // Max constraints based on category selection
                         if ((value === 'Plus Two' || value === 'CBSE 10') && parseInt(newData.aPlus) > 6) {
                             newData.aPlus = '';
                         } else if (value !== 'SSLC' && value !== 'Plus Two' && value !== 'CBSE 10') {
-                            newData.aPlus = ''; // Non-graded categories like LSS, USS, NMMS
+                            newData.aPlus = '';
                         }
                     }
                     return newData;
@@ -656,7 +660,6 @@
             const inputClasses = "w-full bg-white border-0 text-brand-text rounded-xl px-6 py-3.5 focus:outline-none focus:ring-4 focus:ring-brand-yellow/50 transition-all font-light text-base shadow-sm";
             const labelClasses = "block text-sm font-light text-white/90 mb-1.5 ml-1";
 
-            // Grade configurations based on selected category
             const maxGrades = formData.category === 'Plus Two' || formData.category === 'CBSE 10' ? 6 : 10;
             const gradeOptions = Array.from({length: maxGrades}, (_, i) => i + 1);
             
@@ -708,14 +711,6 @@
                             <div>
                                 <label className={labelClasses}>Place</label>
                                 <input type="text" name="place" required value={formData.place} onChange={handleChange} className={inputClasses} placeholder="City/Town" />
-                            </div>
-                            <div>
-                                <label className={labelClasses}>Post Office</label>
-                                <input type="text" name="postOffice" required value={formData.postOffice} onChange={handleChange} className={inputClasses} placeholder="Post Office" />
-                            </div>
-                            <div>
-                                <label className={labelClasses}>PIN Code</label>
-                                <input type="tel" name="pinCode" pattern="[0-9]{6}" required value={formData.pinCode} onChange={handleChange} className={inputClasses} placeholder="6 digit PIN" />
                             </div>
                             <div>
                                 <label className={labelClasses}>Panchayat / Municipality</label>
@@ -781,7 +776,6 @@
             );
         };
 
-        // --- STREAMING_CHUNK: Implementing pass generator and image download features... ---
         const SuccessView = ({ data, setView }) => {
             const passRef = useRef(null);
             const [toast, setToast] = useState(null);
@@ -887,8 +881,6 @@
                                 <div className="text-center border-b border-gray-100 pb-3">
                                     <p className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-1">Student Name</p>
                                     <p className="text-2xl font-black text-brand-text capitalize">{data.name}</p>
-                                    
-                                    {/* Updated Section: Replaced D/o, S/o, C/o with School Name */}
                                     <p className="text-sm font-semibold text-brand-lightBlue mt-1 max-w-xs mx-auto line-clamp-2">
                                         {data.schoolName}
                                     </p>
@@ -937,7 +929,6 @@
             );
         };
 
-        // --- STREAMING_CHUNK: Building admin analytics dashboard... ---
         const AdminDashboard = ({ data }) => {
             const [filterCategory, setFilterCategory] = useState('All');
 
@@ -958,8 +949,7 @@
                     s.panchayats[p] = (s.panchayats[p] || 0) + 1;
                 });
                 
-                // Convert panchayats to sorted array
-                s.panchayatList = Object.entries(s.panchayats)
+                s.panayatList = Object.entries(s.panchayats)
                     .map(([name, count]) => ({ name, count }))
                     .sort((a, b) => b.count - a.count);
                     
@@ -983,7 +973,6 @@
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2">
                         <h2 className="text-2xl font-black text-brand-text">Dashboard Overview</h2>
                         
-                        {/* Filter Dropdown */}
                         <div className="bg-white px-4 py-2.5 rounded-xl shadow-sm border border-gray-200 flex items-center gap-2 hover:border-brand-blue/30 transition-colors">
                             <i className="ph-bold ph-funnel text-brand-blue"></i>
                             <select 
@@ -1016,7 +1005,7 @@
                             Panchayat / Municipality Statistics
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {stats.panchayatList.length > 0 ? stats.panchayatList.map((p, i) => (
+                            {stats.panayatList.length > 0 ? stats.panayatList.map((p, i) => (
                                 <div key={p.name} className="flex justify-between items-center p-4 bg-gray-50 rounded-xl border border-gray-100 hover:border-brand-blue/30 transition-colors shadow-sm">
                                     <div className="flex items-center gap-4">
                                         <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${i === 0 ? 'bg-brand-yellow text-brand-blue' : 'bg-blue-100 text-brand-blue'}`}>
@@ -1042,9 +1031,9 @@
             
             const filteredData = useMemo(() => {
                 return data.filter(r => 
-                    r.name.toLowerCase().includes(search.toLowerCase()) || 
-                    r.regId.toLowerCase().includes(search.toLowerCase()) ||
-                    r.phone.includes(search)
+                    String(r.name).toLowerCase().includes(search.toLowerCase()) || 
+                    String(r.regId).toLowerCase().includes(search.toLowerCase()) ||
+                    String(r.phone).includes(search)
                 );
             }, [data, search]);
 
@@ -1119,7 +1108,6 @@
             );
         };
 
-        // --- STREAMING_CHUNK: Integrating real-time camera scanner... ---
         const AdminAttendance = ({ data, refreshData }) => {
             const [query, setQuery] = useState('');
             const [toast, setToast] = useState(null);
@@ -1131,13 +1119,11 @@
             const startScanner = async () => {
                 if (isScanning) return;
                 try {
-                    // Pre-request camera permission to avoid silent failures on mobile browsers
                     await navigator.mediaDevices.getUserMedia({ video: true });
-                    
                     const html5QrCode = new Html5Qrcode("reader");
                     scannerRef.current = html5QrCode;
                     await html5QrCode.start(
-                        { facingMode: "environment" }, // Forces rear camera
+                        { facingMode: "environment" },
                         { fps: 10, qrbox: { width: 250, height: 250 } },
                         (decodedText) => {
                             if (!isProcessingRef.current) {
@@ -1149,7 +1135,7 @@
                     setIsScanning(true);
                 } catch (err) {
                     console.error("Camera access error:", err);
-                    setToast({ message: "Camera permission denied or unavailable. Please check browser settings.", type: "error" });
+                    setToast({ message: "Camera permission denied or unavailable.", type: "error" });
                 }
             };
 
@@ -1173,7 +1159,7 @@
             }, [isScanning]);
 
             const handleMark = (searchStr) => {
-                const reg = data.find(r => r.regId === searchStr || r.phone === searchStr);
+                const reg = data.find(r => String(r.regId).toLowerCase() === searchStr.toLowerCase() || String(r.phone) === searchStr);
                 if (!reg) {
                     setToast({ message: 'Not found: ' + searchStr, type: 'error' });
                     setTimeout(() => { isProcessingRef.current = false; }, 2000); 
@@ -1203,11 +1189,9 @@
                     <h2 className="text-2xl font-black text-brand-text mb-6">Attendance Scanner</h2>
                     
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        {/* High-end Professional Scanner UI */}
                         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center">
                             <h3 className="font-bold mb-6 text-brand-text self-start"><i className="ph-bold ph-camera"></i> Live QR Scan</h3>
                             
-                            {/* Make the inactive scanner clickable to start */}
                             <div 
                                 onClick={!isScanning ? startScanner : undefined}
                                 className={`bg-gray-900 rounded-2xl overflow-hidden relative border-4 border-gray-800 shadow-inner w-full max-w-sm aspect-square flex items-center justify-center ${!isScanning ? 'cursor-pointer hover:border-brand-yellow/50 transition-colors' : ''}`}
@@ -1217,7 +1201,6 @@
                                         <div id="reader" className="w-full h-full object-cover"></div>
                                         <div className="absolute inset-0 pointer-events-none">
                                             <div className="scan-line"></div>
-                                            {/* Corner Accents */}
                                             <div className="absolute top-4 left-4 w-8 h-8 border-t-4 border-l-4 border-brand-yellow rounded-tl-lg"></div>
                                             <div className="absolute top-4 right-4 w-8 h-8 border-t-4 border-r-4 border-brand-yellow rounded-tr-lg"></div>
                                             <div className="absolute bottom-4 left-4 w-8 h-8 border-b-4 border-l-4 border-brand-yellow rounded-bl-lg"></div>
@@ -1244,10 +1227,6 @@
                                     </Button>
                                 )}
                             </div>
-                            
-                            {isProcessingRef.current && !scannedStudent && isScanning && (
-                                <p className="text-center text-sm text-brand-success font-bold mt-4 animate-pulse">Processing code...</p>
-                            )}
                         </div>
 
                         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
@@ -1262,7 +1241,7 @@
                                 <input 
                                     type="text" 
                                     value={query} onChange={e => setQuery(e.target.value)}
-                                    placeholder="Enter Reg ID (e.g. TT10-001) or Phone" 
+                                    placeholder="Enter Reg ID or Phone" 
                                     className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3.5 mb-4 font-bold text-center uppercase focus:outline-none focus:ring-2 focus:ring-brand-blue"
                                 />
                                 <Button type="submit" className="w-full py-3.5 text-base font-bold bg-[#0838A8] text-white shadow-xl shadow-blue-200">Find Student</Button>
@@ -1288,7 +1267,6 @@
                     {scannedStudent && (
                         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 animate-fade-in backdrop-blur-sm">
                             <div className="bg-white rounded-2xl p-6 w-full max-w-sm text-center shadow-2xl relative overflow-hidden">
-                                
                                 <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-blue-100">
                                     <i className="ph-fill ph-user text-4xl text-brand-blue"></i>
                                 </div>
@@ -1379,7 +1357,6 @@
             );
         };
 
-        // --- STREAMING_CHUNK: Rendering the application root... ---
         const App = () => {
             const [view, setView] = useState('home');
             const [regData, setRegData] = useState(null);
@@ -1389,7 +1366,6 @@
             const [password, setPassword] = useState('');
             const [loginError, setLoginError] = useState('');
 
-            // Scroll to top whenever the view changes (e.g. from home to admin)
             useEffect(() => {
                 window.scrollTo(0, 0);
             }, [view]);
