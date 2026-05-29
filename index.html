@@ -55,7 +55,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
 
     <!-- Custom Styles -->
@@ -123,7 +122,7 @@
             100% { top: 100%; opacity: 0; }
         }
         
-        select {
+        select.custom-select {
             appearance: none;
             background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236B7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
             background-repeat: no-repeat;
@@ -136,6 +135,7 @@
     <div id="root"></div>
 
     <script type="text/babel">
+        // --- STREAMING_CHUNK: Initializing mock database layer... ---
         const { useState, useEffect, useRef, useMemo } = React;
 
         // --- Gesture Hook for Swipe to Back ---
@@ -161,10 +161,52 @@
             return { onTouchStart, onTouchMove, onTouchEnd };
         };
 
-        // --- Mock Database (In-Memory) ---
+        // --- Mock Database (In-Memory with Mock Starter Data) ---
         const MOCK_DB = {
-            registrations: [],
-            counters: { 'SSLC': 0, 'Plus Two': 0, 'LSS': 0, 'USS': 0, 'NMMS': 0 },
+            registrations: [
+                {
+                    regId: "TT10-001",
+                    name: "Mohammed Shafi",
+                    dob: "2010-05-12",
+                    gender: "Male",
+                    guardian: "Alikutty K",
+                    schoolName: "Devadhar Government Higher Secondary School, Tanur",
+                    houseName: "Kallan House",
+                    place: "Rayirimangalam",
+                    postOffice: "Tanur",
+                    pinCode: "676302",
+                    panchayat: "Tanur Municipality",
+                    ward: "12",
+                    phone: "9876543210",
+                    whatsapp: "9876543210",
+                    category: "SSLC",
+                    aPlus: "10",
+                    status: "Pending",
+                    timestamp: new Date().toISOString()
+                },
+                {
+                    regId: "TT12-001",
+                    name: "Anjana Krishnan",
+                    dob: "2008-09-24",
+                    gender: "Female",
+                    guardian: "Radhakrishnan P",
+                    schoolName: "Government Regional Fisheries Technical High School, Tanur",
+                    houseName: "Prarthana",
+                    place: "Kottakkal Road",
+                    postOffice: "Tanur",
+                    pinCode: "676302",
+                    panchayat: "Tanalur",
+                    ward: "4",
+                    phone: "9012345678",
+                    whatsapp: "9012345678",
+                    category: "Plus Two",
+                    aPlus: "6",
+                    status: "Attended",
+                    attendanceTime: new Date().toISOString(),
+                    timestamp: new Date().toISOString()
+                }
+            ],
+            counters: { 'SSLC': 1, 'Plus Two': 1, 'LSS': 0, 'USS': 0, 'NMMS': 0, 'CBSE 10': 0 },
             
             async saveRegistration(data) {
                 return new Promise((resolve) => {
@@ -178,6 +220,7 @@
                         else if(data.category === 'LSS') prefix = 'TTL';
                         else if(data.category === 'USS') prefix = 'TTU';
                         else if(data.category === 'NMMS') prefix = 'TTN';
+                        else if(data.category === 'CBSE 10') prefix = 'TTC';
                         
                         const newReg = {
                             ...data,
@@ -225,13 +268,28 @@
                         resolve(true);
                     }, 300);
                 });
+            },
+
+            async toggleStatus(regId) {
+                return new Promise(resolve => {
+                    setTimeout(() => {
+                        this.registrations = this.registrations.map(r => {
+                            if (r.regId === regId) {
+                                return { ...r, status: r.status === 'Attended' ? 'Pending' : 'Attended' };
+                            }
+                            return r;
+                        });
+                        resolve(true);
+                    }, 100);
+                });
             }
         };
 
+        // --- STREAMING_CHUNK: Defining reusable helper components... ---
         // --- Shared Components ---
         const Toast = ({ message, type, onClose }) => {
             useEffect(() => {
-                const timer = setTimeout(onClose, 3000);
+                const timer = setTimeout(onClose, 4000);
                 return () => clearTimeout(timer);
             }, [onClose]);
 
@@ -281,6 +339,7 @@
             return <canvas ref={canvasRef} className="rounded-xl shadow-sm border-4 border-white"></canvas>;
         };
 
+        // --- STREAMING_CHUNK: Structuring layout and event timer... ---
         const HeaderGraphics = ({ showLogo = true }) => (
             <div className="text-center mb-4 flex flex-col items-center w-full">
                 <div className="w-[85%] sm:w-[80%] max-w-[400px] flex justify-center mb-0 mt-2">
@@ -349,9 +408,10 @@
             );
         };
 
+        // --- STREAMING_CHUNK: Constructing the home page and search views... ---
         // --- Views ---
-        const HomeView = ({ setView, setShowPassword, showPassword, handleAdminLogin, password, setPassword }) => {
-            const calendarUrl = "https://calendar.google.com/calendar/render?action=TEMPLATE&text=Stars+of+Tanur+-+%E0%B4%A4%E0%B4%BE%E0%B4%A8%E0%B5%82%E0%B5%BC+%E0%B4%A4%E0%B4%BE%E0%B4%B0%E0%B5%87&dates=20260608T083000Z/20260608T113000Z&details=Join+us+for+the+grand+Stars+of+Tanur+event+organized+by+PK+Navas+MLA.+Honoring+the+winners+of+SSLC,+PLUS+TWO,+LSS,+USS,+NMMS+from+Tanur.&location=Emarald+Auditorium,+Kurukkol+-+https://maps.app.goo.gl/EtN48oEttJG5S7BR6?g_st=aw";
+        const HomeView = ({ setView, setShowPassword, showPassword, handleAdminLogin, password, setPassword, errorMsg }) => {
+            const calendarUrl = "https://calendar.google.com/calendar/render?action=TEMPLATE&text=Stars+of+Tanur+-+%E0%B4%A4%E0%B4%BE%E0%B4%A8%E0%B5%82%E0%B5%BC+%E0%B4%A4%E0%B4%BE%E0%B4%B0%E0%B5%87&dates=20260608T083000Z/20260608T113000Z&details=Join+us+for+the+grand+Stars+of+Tanur+event+organized+by+PK+Navas+MLA.+Honoring+the+winners+of+SSLC,+PLUS+TWO,+LSS,+USS,+NMMS,+CBSE+10+from+Tanur.&location=Emarald+Auditorium,+Kurukkol+-+https://maps.app.goo.gl/EtN48oEttJG5S7BR6?g_st=aw";
             const mapUrl = "https://maps.app.goo.gl/EtN48oEttJG5S7BR6?g_st=aw";
 
             return (
@@ -413,17 +473,22 @@
                     {/* Admin Access Footer */}
                     <footer className="mt-auto pt-48 pb-4 w-full flex flex-col items-center">
                         {showPassword ? (
-                            <form onSubmit={handleAdminLogin} className="flex gap-2 bg-white/10 p-2 rounded-xl backdrop-blur-md border border-white/20 animate-fade-in">
-                                <input 
-                                    type="password" 
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    placeholder="Admin Password"
-                                    className="bg-white px-3 py-2 rounded-lg text-sm font-bold text-gray-800 outline-none w-36"
-                                    autoFocus
-                                />
-                                <button type="submit" className="bg-brand-yellow text-brand-blue px-3 py-2 rounded-lg text-sm font-bold">Login</button>
-                                <button type="button" onClick={() => setShowPassword(false)} className="bg-red-500 text-white px-2 py-2 rounded-lg text-sm"><i className="ph-bold ph-x"></i></button>
+                            <form onSubmit={handleAdminLogin} className="flex flex-col gap-2 bg-white/10 p-3 rounded-xl backdrop-blur-md border border-white/20 animate-fade-in w-full max-w-[280px]">
+                                <div className="flex gap-2">
+                                    <input 
+                                        type="password" 
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        placeholder="Admin Password"
+                                        className="bg-white px-3 py-2 rounded-lg text-sm font-bold text-gray-800 outline-none flex-1"
+                                        autoFocus
+                                    />
+                                    <button type="submit" className="bg-brand-yellow text-brand-blue px-3 py-2 rounded-lg text-sm font-bold">Login</button>
+                                    <button type="button" onClick={() => setShowPassword(false)} className="bg-red-500 text-white px-2 py-2 rounded-lg text-sm"><i className="ph-bold ph-x"></i></button>
+                                </div>
+                                {errorMsg && (
+                                    <p className="text-red-300 text-xs text-center font-bold">{errorMsg}</p>
+                                )}
                             </form>
                         ) : (
                             <button onClick={() => setShowPassword(true)} className="opacity-20 hover:opacity-100 text-white transition-opacity text-[10px] font-bold px-4 py-2 flex items-center gap-2">
@@ -513,6 +578,7 @@
             );
         };
 
+        // --- STREAMING_CHUNK: Coding the registration form controller... ---
         const RegisterView = ({ setView, setRegData }) => {
             const swipeHandlers = useSwipeBack(() => setView('home'));
             
@@ -540,10 +606,11 @@
                     }
                     
                     if (name === 'category') {
-                        if (value === 'Plus Two' && parseInt(newData.aPlus) > 6) {
+                        // Max constraints based on category selection
+                        if ((value === 'Plus Two' || value === 'CBSE 10') && parseInt(newData.aPlus) > 6) {
                             newData.aPlus = '';
-                        } else if (value !== 'SSLC' && value !== 'Plus Two') {
-                            newData.aPlus = '';
+                        } else if (value !== 'SSLC' && value !== 'Plus Two' && value !== 'CBSE 10') {
+                            newData.aPlus = ''; // Non-graded categories like LSS, USS, NMMS
                         }
                     }
                     return newData;
@@ -589,8 +656,13 @@
             const inputClasses = "w-full bg-white border-0 text-brand-text rounded-xl px-6 py-3.5 focus:outline-none focus:ring-4 focus:ring-brand-yellow/50 transition-all font-light text-base shadow-sm";
             const labelClasses = "block text-sm font-light text-white/90 mb-1.5 ml-1";
 
-            const maxAPlus = formData.category === 'Plus Two' ? 6 : 10;
-            const aPlusOptions = Array.from({length: maxAPlus}, (_, i) => i + 1);
+            // Grade configurations based on selected category
+            const maxGrades = formData.category === 'Plus Two' || formData.category === 'CBSE 10' ? 6 : 10;
+            const gradeOptions = Array.from({length: maxGrades}, (_, i) => i + 1);
+            
+            const gradeLabel = formData.category === 'CBSE 10' ? 'Number of A1 Grades' : 'Number of A+ Grades';
+            const gradePlaceholder = formData.category === 'CBSE 10' ? 'Select Total A1 Grades' : 'Select Total A+ Grades';
+            const gradeSuffix = formData.category === 'CBSE 10' ? 'A1' : 'A+';
 
             return (
                 <div {...swipeHandlers} className="max-w-2xl mx-auto px-4 pt-14 pb-6 md:py-14 animate-fade-in relative z-10 min-h-screen">
@@ -614,7 +686,7 @@
                             </div>
                             <div>
                                 <label className={labelClasses}>Gender</label>
-                                <select name="gender" required value={formData.gender} onChange={handleChange} className={inputClasses}>
+                                <select name="gender" required value={formData.gender} onChange={handleChange} className={`custom-select ${inputClasses}`}>
                                     <option value="" disabled>Select Gender</option>
                                     <option value="Male">Male</option>
                                     <option value="Female">Female</option>
@@ -647,7 +719,7 @@
                             </div>
                             <div>
                                 <label className={labelClasses}>Panchayat / Municipality</label>
-                                <select name="panchayat" required value={formData.panchayat} onChange={handleChange} className={inputClasses}>
+                                <select name="panchayat" required value={formData.panchayat} onChange={handleChange} className={`custom-select ${inputClasses}`}>
                                     <option value="" disabled>Select Location</option>
                                     {panchayats.map(p => <option key={p} value={p}>{p}</option>)}
                                 </select>
@@ -672,8 +744,8 @@
                             </div>
                             <div className="md:col-span-2 mt-2" id="category-section">
                                 <label className={`${labelClasses} font-semibold`}>Category <span className="text-red-400">*</span></label>
-                                <div className={`grid grid-cols-2 sm:grid-cols-5 gap-2.5 p-2 rounded-xl transition-all duration-300 ${submitAttempted && !formData.category ? 'bg-red-500/20 border-2 border-red-400 shadow-[0_0_20px_rgba(239,68,68,0.4)]' : 'border-2 border-transparent'}`}>
-                                    {['SSLC', 'Plus Two', 'LSS', 'USS', 'NMMS'].map(cat => (
+                                <div className={`grid grid-cols-2 sm:grid-cols-3 gap-2.5 p-2 rounded-xl transition-all duration-300 ${submitAttempted && !formData.category ? 'bg-red-500/20 border-2 border-red-400 shadow-[0_0_20px_rgba(239,68,68,0.4)]' : 'border-2 border-transparent'}`}>
+                                    {['SSLC', 'Plus Two', 'LSS', 'USS', 'NMMS', 'CBSE 10'].map(cat => (
                                         <label key={cat} className={`flex items-center justify-center py-3 rounded-xl cursor-pointer transition-all border ${formData.category === cat ? 'bg-brand-yellow border-brand-yellow text-[#0838A8] font-bold shadow-md' : 'bg-white/10 border-white/20 text-white hover:bg-white/20 font-light'}`}>
                                             <input type="radio" name="category" value={cat} checked={formData.category === cat} onChange={handleChange} className="opacity-0 absolute w-0 h-0" />
                                             {cat}
@@ -686,13 +758,13 @@
                                     </p>
                                 )}
                             </div>
-                            {(formData.category === 'SSLC' || formData.category === 'Plus Two') && (
+                            {(formData.category === 'SSLC' || formData.category === 'Plus Two' || formData.category === 'CBSE 10') && (
                                 <div className="animate-fade-in md:col-span-2">
-                                    <label className={labelClasses}>Number of A+ Grades</label>
-                                    <select name="aPlus" required value={formData.aPlus} onChange={handleChange} className={inputClasses}>
-                                        <option value="" disabled>Select Total A+ Grades</option>
-                                        {aPlusOptions.map(num => (
-                                            <option key={num} value={num}>{num} A+</option>
+                                    <label className={labelClasses}>{gradeLabel}</label>
+                                    <select name="aPlus" required value={formData.aPlus} onChange={handleChange} className={`custom-select ${inputClasses}`}>
+                                        <option value="" disabled>{gradePlaceholder}</option>
+                                        {gradeOptions.map(num => (
+                                            <option key={num} value={num}>{num} {gradeSuffix}</option>
                                         ))}
                                     </select>
                                 </div>
@@ -709,6 +781,7 @@
             );
         };
 
+        // --- STREAMING_CHUNK: Implementing pass generator and image download features... ---
         const SuccessView = ({ data, setView }) => {
             const passRef = useRef(null);
             const [toast, setToast] = useState(null);
@@ -814,6 +887,11 @@
                                 <div className="text-center border-b border-gray-100 pb-3">
                                     <p className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-1">Student Name</p>
                                     <p className="text-2xl font-black text-brand-text capitalize">{data.name}</p>
+                                    
+                                    {/* Updated Section: Replaced D/o, S/o, C/o with School Name */}
+                                    <p className="text-sm font-semibold text-brand-lightBlue mt-1 max-w-xs mx-auto line-clamp-2">
+                                        {data.schoolName}
+                                    </p>
                                 </div>
                                 <div className="grid grid-cols-2 gap-4 text-center pb-3 border-b border-gray-100">
                                     <div>
@@ -834,30 +912,23 @@
                         </div>
                     </div>
 
-                    {/* Thank You Note added here */}
-                    <div className="text-center mb-8 pdf-hide text-white/90">
-                        <p className="font-malayalam text-lg font-semibold mb-1">രജിസ്റ്റർ ചെയ്തതിന് നന്ദി!</p>
-                        <p className="text-sm font-light text-white/70">Thank you for registering!</p>
-                        <p className="mt-2 font-bold text-brand-yellow">- പി.കെ നവാസ് എംഎൽഎ (P.K Navas MLA)</p>
-                    </div>
-
                     <div className="flex flex-col gap-3 pdf-hide">
                         <div className="flex flex-col sm:flex-row gap-3">
                             <Button onClick={handleShareWhatsApp} className="w-full bg-[#25D366] hover:bg-brand-yellow text-white hover:text-white font-bold transition-colors duration-300" disabled={isSharing}>
                                 {isSharing ? <i className="ph-fill ph-spinner-gap animate-spin text-2xl"></i> : <i className="ph-fill ph-whatsapp-logo text-2xl"></i>}
                                 {isSharing ? 'Preparing...' : 'Share Pass'}
                             </Button>
-                            <Button onClick={handleDownloadPNG} variant="secondary" className="w-full font-bold" disabled={isDownloading}>
+                            <Button onClick={handleDownloadPNG} variant="secondary" className="w-full font-bold bg-white text-brand-blue hover:bg-gray-100 shadow-none border-none" disabled={isDownloading}>
                                 {isDownloading ? <i className="ph-fill ph-spinner-gap animate-spin text-xl"></i> : <i className="ph-bold ph-download-simple text-xl"></i>}
                                 {isDownloading ? 'Saving...' : 'Save Image'}
                             </Button>
                         </div>
                         
                         <div className="flex flex-row justify-between gap-3 mt-4 border-t border-white/20 pt-4">
-                            <Button onClick={() => setView('home')} variant="secondary" className="w-full text-sm font-bold bg-white/10 text-white hover:bg-white/20 border-none shadow-none">
+                            <Button onClick={() => setView('home')} className="w-full text-sm font-bold bg-white text-brand-blue hover:bg-gray-100 shadow-none border-none transition-colors">
                                 <i className="ph-bold ph-house text-lg"></i> Go Home
                             </Button>
-                            <Button onClick={() => setView('register')} variant="secondary" className="w-full text-sm font-bold bg-white/10 text-brand-yellow hover:bg-white/20 border-none shadow-none">
+                            <Button onClick={() => setView('register')} className="w-full text-sm font-bold bg-brand-yellow text-brand-blue hover:bg-yellow-400 shadow-none border-none transition-colors">
                                 <i className="ph-bold ph-user-plus text-lg"></i> Register New
                             </Button>
                         </div>
@@ -866,45 +937,34 @@
             );
         };
 
+        // --- STREAMING_CHUNK: Building admin analytics dashboard... ---
         const AdminDashboard = ({ data }) => {
-            const chartRef = useRef(null);
-            const chartInstance = useRef(null);
+            const [filterCategory, setFilterCategory] = useState('All');
+
+            const filteredData = useMemo(() => {
+                if (filterCategory === 'All') return data;
+                return data.filter(r => r.category === filterCategory);
+            }, [data, filterCategory]);
 
             const stats = useMemo(() => {
-                const s = { total: data.length, boys: 0, girls: 0, attended: 0, pending: 0, categories: {} };
-                data.forEach(r => {
+                const s = { total: filteredData.length, boys: 0, girls: 0, attended: 0, pending: 0, panchayats: {} };
+                filteredData.forEach(r => {
                     if (r.gender === 'Male') s.boys++;
                     if (r.gender === 'Female') s.girls++;
                     if (r.status === 'Attended') s.attended++;
                     else s.pending++;
-                    s.categories[r.category] = (s.categories[r.category] || 0) + 1;
+                    
+                    const p = r.panchayat || 'Unknown';
+                    s.panchayats[p] = (s.panchayats[p] || 0) + 1;
                 });
+                
+                // Convert panchayats to sorted array
+                s.panchayatList = Object.entries(s.panchayats)
+                    .map(([name, count]) => ({ name, count }))
+                    .sort((a, b) => b.count - a.count);
+                    
                 return s;
-            }, [data]);
-
-            useEffect(() => {
-                if (chartRef.current) {
-                    if (chartInstance.current) chartInstance.current.destroy();
-                    const ctx = chartRef.current.getContext('2d');
-                    chartInstance.current = new Chart(ctx, {
-                        type: 'bar',
-                        data: {
-                            labels: Object.keys(stats.categories),
-                            datasets: [{
-                                label: 'Registrations',
-                                data: Object.values(stats.categories),
-                                backgroundColor: '#F6D10D',
-                                borderRadius: 8
-                            }]
-                        },
-                        options: {
-                            responsive: true, maintainAspectRatio: false,
-                            plugins: { legend: { display: false } },
-                            scales: { y: { beginAtZero: true } }
-                        }
-                    });
-                }
-            }, [stats]);
+            }, [filteredData]);
 
             const StatCard = ({ title, value, icon, colorClass }) => (
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
@@ -920,7 +980,28 @@
 
             return (
                 <div className="space-y-6 animate-fade-in p-6">
-                    <h2 className="text-2xl font-black text-brand-text">Dashboard Overview</h2>
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2">
+                        <h2 className="text-2xl font-black text-brand-text">Dashboard Overview</h2>
+                        
+                        {/* Filter Dropdown */}
+                        <div className="bg-white px-4 py-2.5 rounded-xl shadow-sm border border-gray-200 flex items-center gap-2 hover:border-brand-blue/30 transition-colors">
+                            <i className="ph-bold ph-funnel text-brand-blue"></i>
+                            <select 
+                                value={filterCategory} 
+                                onChange={(e) => setFilterCategory(e.target.value)}
+                                className="bg-transparent font-bold text-gray-700 focus:outline-none cursor-pointer text-sm"
+                            >
+                                <option value="All">All Categories</option>
+                                <option value="SSLC">SSLC</option>
+                                <option value="Plus Two">Plus Two</option>
+                                <option value="LSS">LSS</option>
+                                <option value="USS">USS</option>
+                                <option value="NMMS">NMMS</option>
+                                <option value="CBSE 10">CBSE 10</option>
+                            </select>
+                        </div>
+                    </div>
+                    
                     <div className="grid grid-cols-2 xl:grid-cols-5 gap-4">
                         <StatCard title="Total" value={stats.total} icon="ph-users" colorClass="bg-blue-100 text-brand-blue" />
                         <StatCard title="Attended" value={stats.attended} icon="ph-check-circle" colorClass="bg-green-100 text-brand-success" />
@@ -928,15 +1009,35 @@
                         <StatCard title="Boys" value={stats.boys} icon="ph-gender-male" colorClass="bg-purple-100 text-purple-600" />
                         <StatCard title="Girls" value={stats.girls} icon="ph-gender-female" colorClass="bg-pink-100 text-pink-600" />
                     </div>
-                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                        <h3 className="font-bold text-brand-text mb-4">Registrations by Category</h3>
-                        <div className="h-64"><canvas ref={chartRef}></canvas></div>
+                    
+                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 mt-6">
+                        <h3 className="font-bold text-brand-text mb-6 flex items-center gap-2">
+                            <i className="ph-bold ph-map-pin text-brand-blue"></i> 
+                            Panchayat / Municipality Statistics
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {stats.panchayatList.length > 0 ? stats.panchayatList.map((p, i) => (
+                                <div key={p.name} className="flex justify-between items-center p-4 bg-gray-50 rounded-xl border border-gray-100 hover:border-brand-blue/30 transition-colors shadow-sm">
+                                    <div className="flex items-center gap-4">
+                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${i === 0 ? 'bg-brand-yellow text-brand-blue' : 'bg-blue-100 text-brand-blue'}`}>
+                                            {i + 1}
+                                        </div>
+                                        <span className="font-bold text-gray-700">{p.name}</span>
+                                    </div>
+                                    <span className="bg-white px-4 py-1.5 rounded-lg shadow-sm border border-gray-200 font-black text-brand-blue">
+                                        {p.count}
+                                    </span>
+                                </div>
+                            )) : (
+                                <p className="text-gray-400 text-center py-8 col-span-2">No registrations found for this filter.</p>
+                            )}
+                        </div>
                     </div>
                 </div>
             );
         };
 
-        const AdminRegistrations = ({ data }) => {
+        const AdminRegistrations = ({ data, refreshData }) => {
             const [search, setSearch] = useState('');
             
             const filteredData = useMemo(() => {
@@ -952,6 +1053,11 @@
                 const wb = XLSX.utils.book_new();
                 XLSX.utils.book_append_sheet(wb, ws, "Registrations");
                 XLSX.writeFile(wb, "Tanur_Tare_Registrations.xlsx");
+            };
+
+            const handleToggleStatus = async (regId) => {
+                await MOCK_DB.toggleStatus(regId);
+                refreshData();
             };
 
             return (
@@ -986,15 +1092,21 @@
                             </thead>
                             <tbody className="divide-y divide-gray-100 font-medium text-gray-700">
                                 {filteredData.map(r => (
-                                    <tr key={r.regId} className="hover:bg-blue-50/50">
+                                    <tr key={r.regId} className="hover:bg-blue-50/50 transition-colors">
                                         <td className="px-6 py-3 font-mono font-bold text-brand-blue">{r.regId}</td>
                                         <td className="px-6 py-3 capitalize">{r.name}</td>
                                         <td className="px-6 py-3 truncate max-w-[150px]">{r.schoolName}</td>
-                                        <td className="px-6 py-3">{r.category} {r.aPlus && <span className="text-xs text-red-500 ml-1">({r.aPlus} A+)</span>}</td>
+                                        <td className="px-6 py-3">
+                                            {r.category} 
+                                            {r.aPlus && <span className="text-xs text-red-500 ml-1">({r.aPlus} {r.category === 'CBSE 10' ? 'A1' : 'A+'})</span>}
+                                        </td>
                                         <td className="px-6 py-3">{r.phone}</td>
                                         <td className="px-6 py-3">{r.panchayat}</td>
                                         <td className="px-6 py-3">
-                                            <span className={`px-2.5 py-1 rounded-md text-xs font-bold ${r.status === 'Attended' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                                            <span 
+                                                onClick={() => handleToggleStatus(r.regId)}
+                                                className={`px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-all shadow-sm ${r.status === 'Attended' ? 'bg-green-100 text-green-700 hover:bg-green-200 border border-green-200' : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200 border border-yellow-200'}`}
+                                            >
                                                 {r.status}
                                             </span>
                                         </td>
@@ -1007,6 +1119,7 @@
             );
         };
 
+        // --- STREAMING_CHUNK: Integrating real-time camera scanner... ---
         const AdminAttendance = ({ data, refreshData }) => {
             const [query, setQuery] = useState('');
             const [toast, setToast] = useState(null);
@@ -1018,6 +1131,9 @@
             const startScanner = async () => {
                 if (isScanning) return;
                 try {
+                    // Pre-request camera permission to avoid silent failures on mobile browsers
+                    await navigator.mediaDevices.getUserMedia({ video: true });
+                    
                     const html5QrCode = new Html5Qrcode("reader");
                     scannerRef.current = html5QrCode;
                     await html5QrCode.start(
@@ -1032,7 +1148,8 @@
                     );
                     setIsScanning(true);
                 } catch (err) {
-                    setToast({ message: "Camera access failed. Please grant permissions.", type: "error" });
+                    console.error("Camera access error:", err);
+                    setToast({ message: "Camera permission denied or unavailable. Please check browser settings.", type: "error" });
                 }
             };
 
@@ -1262,6 +1379,7 @@
             );
         };
 
+        // --- STREAMING_CHUNK: Rendering the application root... ---
         const App = () => {
             const [view, setView] = useState('home');
             const [regData, setRegData] = useState(null);
@@ -1269,6 +1387,7 @@
             const [adminTab, setAdminTab] = useState('dashboard');
             const [showPassword, setShowPassword] = useState(false);
             const [password, setPassword] = useState('');
+            const [loginError, setLoginError] = useState('');
 
             // Scroll to top whenever the view changes (e.g. from home to admin)
             useEffect(() => {
@@ -1290,8 +1409,9 @@
                     setView('admin');
                     setShowPassword(false);
                     setPassword('');
+                    setLoginError('');
                 } else {
-                    alert("Incorrect Password");
+                    setLoginError("Incorrect Admin Password!");
                 }
             };
 
@@ -1299,7 +1419,7 @@
                 return (
                     <AdminLayout setView={setView} activeTab={adminTab} setActiveTab={setAdminTab}>
                         {adminTab === 'dashboard' && <AdminDashboard data={adminData} />}
-                        {adminTab === 'registrations' && <AdminRegistrations data={adminData} />}
+                        {adminTab === 'registrations' && <AdminRegistrations data={adminData} refreshData={fetchAdminData} />}
                         {adminTab === 'attendance' && <AdminAttendance data={adminData} refreshData={fetchAdminData} />}
                     </AdminLayout>
                 );
@@ -1316,6 +1436,7 @@
                                 handleAdminLogin={handleAdminLogin}
                                 password={password}
                                 setPassword={setPassword}
+                                errorMsg={loginError}
                             />
                         )}
                         {view === 'search_pass' && <SearchPassView setView={setView} setRegData={setRegData} />}
