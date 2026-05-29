@@ -135,8 +135,8 @@
     <script type="text/babel">
         const { useState, useEffect, useRef, useMemo } = React;
 
-        // PASTE YOUR DEPLOYED GOOGLE APPS SCRIPT WEB APP URL HERE:
-        const GOOGLE_SHEET_WEB_APP_URL = "PASTE_YOUR_COPIED_WEB_APP_URL_HERE";
+        // GOOGLE APPS SCRIPT WEB APP URL INTEGRATED SUCCESSFULLY
+        const GOOGLE_SHEET_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbz3t3KRZ54fChhm0f7DjJezC18ldDUaVbVzIPCZL_BiTFp6_QpK0jJPHfm4Je5OV5_ESA/exec";
 
         // Gesture Hook for Swipe to Back
         const useSwipeBack = (onBack) => {
@@ -161,7 +161,7 @@
             return { onTouchStart, onTouchMove, onTouchEnd };
         };
 
-        // Live Database Synced with Google Sheets (Falls back to Mock Data if URL is not pasted)
+        // Live Database Synced with Google Sheets (Falls back to Mock Data if URL fails)
         const MOCK_DB = {
             registrations: [
                 {
