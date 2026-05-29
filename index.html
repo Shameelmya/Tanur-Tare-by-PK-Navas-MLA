@@ -1,0 +1,1045 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>താനൂർ താരേ - Stars of Tanur</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Anek+Malayalam:wght@400;600;700;800&family=Sora:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            blue: '#0838A8',
+                            lightBlue: '#0A4ED5',
+                            yellow: '#F6D10D',
+                            bg: '#F8FAFC',
+                            text: '#1E293B',
+                            success: '#22C55E',
+                            danger: '#EF4444'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Sora', 'sans-serif'],
+                        malayalam: ['Anek Malayalam', 'sans-serif'],
+                    },
+                    borderRadius: {
+                        'xl': '16px',
+                        '2xl': '24px',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- External Libraries -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+
+    <!-- Custom Styles -->
+    <style>
+        body {
+            /* Pure Blue Gradient with subtle SVG noise texture */
+            background-color: #0838A8;
+            background-image: 
+                url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E"),
+                linear-gradient(135deg, #0A4ED5 0%, #0838A8 100%);
+            background-attachment: fixed;
+            color: #1E293B;
+            -webkit-font-smoothing: antialiased;
+            min-height: 100vh;
+        }
+
+        /* Override background for admin panel */
+        .admin-layout {
+            background: #F8FAFC !important;
+            background-image: none !important;
+        }
+
+        .pdf-hide { display: block; }
+        .is-printing .pdf-hide { display: none !important; }
+        
+        .pass-container { position: relative; background-color: #ffffff; }
+        .pass-container::before, .pass-container::after {
+            content: ''; position: absolute; top: 50%; width: 30px; height: 30px;
+            background-color: #0838A8; border-radius: 50%; transform: translateY(-50%); z-index: 10;
+        }
+        .pass-container::before { left: -15px; }
+        .pass-container::after { right: -15px; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
+        
+        /* Select dropdown arrow customization */
+        select {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236B7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 1rem center;
+            background-size: 1.5em 1.5em;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef, useMemo } = React;
+
+        // --- Mock Database (In-Memory) ---
+        const MOCK_DB = {
+            registrations: [],
+            counters: { 'SSLC': 0, 'Plus Two': 0, 'LSS': 0, 'USS': 0, 'NMMS': 0 },
+            
+            async saveRegistration(data) {
+                return new Promise((resolve) => {
+                    setTimeout(() => {
+                        this.counters[data.category]++;
+                        const idStr = String(this.counters[data.category]).padStart(3, '0');
+                        
+                        let prefix = '';
+                        if(data.category === 'SSLC') prefix = 'TT10';
+                        else if(data.category === 'Plus Two') prefix = 'TT12';
+                        else if(data.category === 'LSS') prefix = 'TTL';
+                        else if(data.category === 'USS') prefix = 'TTU';
+                        else if(data.category === 'NMMS') prefix = 'TTN';
+                        
+                        const newReg = {
+                            ...data,
+                            regId: `${prefix}-${idStr}`,
+                            timestamp: new Date().toISOString(),
+                            status: 'Pending'
+                        };
+                        this.registrations.unshift(newReg);
+                        resolve(newReg);
+                    }, 500);
+                });
+            },
+            
+            async getRegistrations() {
+                return new Promise(resolve => setTimeout(() => resolve([...this.registrations]), 300));
+            },
+
+            async searchRegistration(criteria) {
+                return new Promise(resolve => {
+                    setTimeout(() => {
+                        let result = null;
+                        if (criteria.regId) {
+                            result = this.registrations.find(r => r.regId.toLowerCase() === criteria.regId.toLowerCase());
+                        } else if (criteria.name && criteria.phone) {
+                            result = this.registrations.find(r => 
+                                r.name.toLowerCase().includes(criteria.name.toLowerCase()) && 
+                                r.phone === criteria.phone
+                            );
+                        }
+                        resolve(result);
+                    }, 300);
+                });
+            },
+
+            async markAttended(regIds) {
+                return new Promise(resolve => {
+                    setTimeout(() => {
+                        const time = new Date().toISOString();
+                        this.registrations = this.registrations.map(r => {
+                            if (regIds.includes(r.regId)) {
+                                return { ...r, status: 'Attended', attendanceTime: time };
+                            }
+                            return r;
+                        });
+                        resolve(true);
+                    }, 300);
+                });
+            }
+        };
+
+        // --- Shared Components ---
+        const Toast = ({ message, type, onClose }) => {
+            useEffect(() => {
+                const timer = setTimeout(onClose, 3000);
+                return () => clearTimeout(timer);
+            }, [onClose]);
+
+            const bgColors = {
+                success: 'bg-brand-success text-white',
+                error: 'bg-brand-danger text-white',
+                info: 'bg-brand-yellow text-brand-text'
+            };
+
+            return (
+                <div className="fixed top-4 right-4 z-50 animate-fade-in">
+                    <div className={`${bgColors[type] || bgColors.info} px-6 py-3 rounded-xl shadow-lg flex items-center gap-3 font-semibold`}>
+                        {type === 'success' && <i className="ph-fill ph-check-circle text-xl"></i>}
+                        {type === 'error' && <i className="ph-fill ph-warning-circle text-xl"></i>}
+                        <span>{message}</span>
+                    </div>
+                </div>
+            );
+        };
+
+        const Button = ({ children, variant = 'primary', className = '', ...props }) => {
+            const baseStyle = "px-6 py-3.5 rounded-xl font-bold transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed";
+            const variants = {
+                primary: "bg-brand-yellow text-[#0838A8] hover:bg-yellow-400 shadow-lg",
+                secondary: "bg-white text-brand-blue hover:bg-blue-50",
+            };
+            return (
+                <button className={`${baseStyle} ${variants[variant]} ${className}`} {...props}>
+                    {children}
+                </button>
+            );
+        };
+
+        const QRCodeComponent = ({ value, size = 120 }) => {
+            const canvasRef = useRef(null);
+            useEffect(() => {
+                if (canvasRef.current && value) {
+                    new QRious({
+                        element: canvasRef.current,
+                        value: value,
+                        size: size,
+                        level: 'H',
+                        foreground: '#1E293B'
+                    });
+                }
+            }, [value, size]);
+            return <canvas ref={canvasRef} className="rounded-xl shadow-sm border-4 border-white"></canvas>;
+        };
+
+        // --- Views ---
+        const HomeView = ({ setView, setShowPassword, showPassword, handleAdminLogin, password, setPassword }) => {
+            return (
+                <div className="max-w-md mx-auto px-4 py-8 animate-fade-in flex flex-col items-center min-h-[90vh] justify-between relative z-10">
+                    <div className="w-full flex flex-col items-center">
+                        {/* Poster */}
+                        <div className="w-full max-w-[400px] aspect-[4/5] rounded-2xl overflow-hidden shadow-2xl mb-8 border-4 border-white/20">
+                            <img 
+                                src="src/poster.jpeg" 
+                                onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/800x1000/0838A8/F6D10D?text=Stars+of+Tanur+Poster'; }}
+                                alt="Stars of Tanur Poster" 
+                                className="w-full h-full object-cover" 
+                            />
+                        </div>
+
+                        {/* Register Button */}
+                        <Button onClick={() => setView('register')} className="w-full text-lg py-4 mb-5 shadow-[0_8px_30px_rgb(246,209,13,0.3)] hover:shadow-[0_8px_30px_rgb(246,209,13,0.5)]">
+                            <i className="ph-bold ph-pencil-simple text-xl"></i> Register Now
+                        </Button>
+
+                        {/* Search Pass Link */}
+                        <button onClick={() => setView('search_pass')} className="text-white hover:text-brand-yellow font-semibold transition-colors flex items-center gap-2">
+                            Already registered? Get entry pass now <i className="ph-bold ph-arrow-right"></i>
+                        </button>
+                    </div>
+
+                    {/* Admin Access Footer */}
+                    <footer className="mt-12 w-full flex flex-col items-center">
+                        {showPassword ? (
+                            <form onSubmit={handleAdminLogin} className="flex gap-2 bg-white/10 p-2 rounded-xl backdrop-blur-md border border-white/20 animate-fade-in">
+                                <input 
+                                    type="password" 
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    placeholder="Admin Password"
+                                    className="bg-white px-3 py-2 rounded-lg text-sm font-bold text-gray-800 outline-none w-36"
+                                    autoFocus
+                                />
+                                <button type="submit" className="bg-brand-yellow text-brand-blue px-3 py-2 rounded-lg text-sm font-bold">Login</button>
+                                <button type="button" onClick={() => setShowPassword(false)} className="bg-red-500 text-white px-2 py-2 rounded-lg text-sm"><i className="ph-bold ph-x"></i></button>
+                            </form>
+                        ) : (
+                            <button onClick={() => setShowPassword(true)} className="opacity-30 hover:opacity-100 text-white transition-opacity text-xs font-bold px-4 py-2 flex items-center gap-2">
+                                <i className="ph-bold ph-lock-key"></i> Admin Access
+                            </button>
+                        )}
+                    </footer>
+                </div>
+            );
+        };
+
+        const SearchPassView = ({ setView, setRegData }) => {
+            const [searchType, setSearchType] = useState('regId');
+            const [formData, setFormData] = useState({ regId: '', name: '', phone: '' });
+            const [loading, setLoading] = useState(false);
+            const [toast, setToast] = useState(null);
+
+            const handleSearch = async (e) => {
+                e.preventDefault();
+                setLoading(true);
+                const result = await MOCK_DB.searchRegistration(
+                    searchType === 'regId' ? { regId: formData.regId } : { name: formData.name, phone: formData.phone }
+                );
+                setLoading(false);
+
+                if (result) {
+                    setRegData(result);
+                    setView('success');
+                } else {
+                    setToast({ message: 'No registration found matching these details.', type: 'error' });
+                }
+            };
+
+            const inputClasses = "w-full bg-white border-0 text-brand-text rounded-xl px-6 py-3.5 focus:outline-none focus:ring-4 focus:ring-brand-yellow/50 transition-all font-semibold text-base shadow-sm";
+
+            return (
+                <div className="max-w-md mx-auto px-4 py-12 animate-fade-in relative z-10">
+                    {toast && <Toast {...toast} onClose={() => setToast(null)} />}
+
+                    <button onClick={() => setView('home')} className="text-white/70 hover:text-white flex items-center gap-2 mb-6 font-semibold bg-white/10 px-4 py-2 rounded-lg backdrop-blur-sm border border-white/10 w-fit">
+                        <i className="ph-bold ph-arrow-left"></i> Back to Home
+                    </button>
+
+                    <div className="text-center mb-8">
+                        <h2 className="text-3xl font-black font-malayalam text-white tracking-tight mb-2">Get Your Pass</h2>
+                        <p className="text-white/80 text-sm font-semibold">Search to download your entry pass.</p>
+                    </div>
+
+                    <div className="bg-white/10 backdrop-blur-md p-6 rounded-2xl border border-white/20 shadow-xl">
+                        {/* Tabs */}
+                        <div className="flex bg-white/10 rounded-xl p-1 mb-6">
+                            <button 
+                                type="button" 
+                                onClick={() => setSearchType('regId')} 
+                                className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${searchType === 'regId' ? 'bg-white text-brand-blue shadow-sm' : 'text-white hover:bg-white/10'}`}
+                            >
+                                By Reg ID
+                            </button>
+                            <button 
+                                type="button" 
+                                onClick={() => setSearchType('namePhone')} 
+                                className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${searchType === 'namePhone' ? 'bg-white text-brand-blue shadow-sm' : 'text-white hover:bg-white/10'}`}
+                            >
+                                Name & Mobile
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleSearch} className="space-y-4">
+                            {searchType === 'regId' ? (
+                                <div className="animate-fade-in">
+                                    <label className="block text-sm font-semibold text-white/90 mb-1.5 ml-1">Registration ID</label>
+                                    <input type="text" required value={formData.regId} onChange={(e) => setFormData({...formData, regId: e.target.value})} placeholder="e.g. TT10-001" className={inputClasses} />
+                                </div>
+                            ) : (
+                                <div className="animate-fade-in space-y-4">
+                                    <div>
+                                        <label className="block text-sm font-semibold text-white/90 mb-1.5 ml-1">Student Name (Partial match works)</label>
+                                        <input type="text" required value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} placeholder="Enter name" className={inputClasses} />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-semibold text-white/90 mb-1.5 ml-1">Mobile Number</label>
+                                        <input type="tel" pattern="[0-9]{10}" required value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} placeholder="10 digit mobile" className={inputClasses} />
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="pt-4">
+                                <Button type="submit" className="w-full text-lg py-3.5" disabled={loading}>
+                                    {loading ? <i className="ph-fill ph-spinner-gap animate-spin text-2xl"></i> : 'Find Entry Pass'}
+                                </Button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            );
+        };
+
+        const RegisterView = ({ setView, setRegData }) => {
+            const panchayats = [
+                "Tanur Municipality", "Ozhur", "Ponmundam", "Tanalur", "Niramaruthur", "Cheriyamundam"
+            ];
+
+            const [formData, setFormData] = useState({
+                name: '', gender: '', guardian: '', schoolName: '', houseName: '', place: '', postOffice: '', pinCode: '', 
+                panchayat: '', ward: '', phone: '', whatsapp: '', category: '', aPlus: ''
+            });
+            const [sameAsPhone, setSameAsPhone] = useState(false);
+            const [loading, setLoading] = useState(false);
+            const [toast, setToast] = useState(null);
+            const [submitAttempted, setSubmitAttempted] = useState(false);
+
+            const handleChange = (e) => {
+                const { name, value } = e.target;
+                
+                setFormData(prev => {
+                    const newData = { ...prev, [name]: value };
+                    
+                    if (name === 'phone' && sameAsPhone) {
+                        newData.whatsapp = value;
+                    }
+                    
+                    if (name === 'category') {
+                        if (value === 'Plus Two' && parseInt(newData.aPlus) > 6) {
+                            newData.aPlus = '';
+                        } else if (value !== 'SSLC' && value !== 'Plus Two') {
+                            newData.aPlus = '';
+                        }
+                    }
+                    return newData;
+                });
+            };
+
+            const handleSameAsPhoneToggle = (e) => {
+                setSameAsPhone(e.target.checked);
+                if (e.target.checked) {
+                    setFormData(prev => ({ ...prev, whatsapp: prev.phone }));
+                } else {
+                    setFormData(prev => ({ ...prev, whatsapp: '' }));
+                }
+            };
+
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                setSubmitAttempted(true);
+                
+                // Strict manual validation for custom radio buttons
+                if (!formData.category) {
+                    setToast({ message: 'Please select a Category below', type: 'error' });
+                    // Scroll down to category section slightly
+                    const element = document.getElementById('category-section');
+                    if(element) element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    return;
+                }
+
+                if (formData.phone.length !== 10) {
+                    setToast({ message: 'Phone number must be exactly 10 digits', type: 'error' });
+                    return;
+                }
+
+                setLoading(true);
+                try {
+                    const result = await MOCK_DB.saveRegistration(formData);
+                    setRegData(result);
+                    setView('success');
+                } catch (error) {
+                    setToast({ message: 'Registration failed. Try again.', type: 'error' });
+                    setLoading(false);
+                }
+            };
+
+            // International standard inputs on pure blue background - increased left/right padding (px-6)
+            const inputClasses = "w-full bg-white border-0 text-brand-text rounded-xl px-6 py-3.5 focus:outline-none focus:ring-4 focus:ring-brand-yellow/50 transition-all font-semibold text-base shadow-sm";
+            const labelClasses = "block text-sm font-semibold text-white/90 mb-1.5 ml-1";
+
+            const maxAPlus = formData.category === 'Plus Two' ? 6 : 10;
+            const aPlusOptions = Array.from({length: maxAPlus}, (_, i) => i + 1);
+
+            return (
+                <div className="max-w-2xl mx-auto px-4 py-6 md:py-10 animate-fade-in relative z-10">
+                    {toast && <Toast {...toast} onClose={() => setToast(null)} />}
+                    
+                    <button onClick={() => setView('home')} className="text-white/70 hover:text-white flex items-center gap-2 mb-6 font-semibold bg-white/10 px-4 py-2 rounded-lg backdrop-blur-sm border border-white/10 w-fit">
+                        <i className="ph-bold ph-arrow-left"></i> Back to Home
+                    </button>
+
+                    {/* Header Graphics */}
+                    <div className="text-center mb-10 flex flex-col items-center">
+                        {/* Header Banner - No shadow */}
+                        <div className="w-full flex justify-center mb-1">
+                            <img src="src/banner.png" alt="Header" className="w-full rounded-2xl object-cover" onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/800x250/0A4ED5/FFFFFF?text=Header+Banner'; }} />
+                        </div>
+
+                        {/* Malayalam Text */}
+                        <p className="text-white text-sm font-semibold font-malayalam tracking-wide mb-0 mt-1 opacity-90">
+                            പികെ നവാസ് എംഎൽഎ സംഘടിപ്പിക്കുന്ന
+                        </p>
+
+                        {/* Logo */}
+                        <div className="w-full flex justify-center mb-2 mt-1">
+                            <img src="src/logo.png" alt="Logo" className="w-80 sm:w-[400px] h-auto object-contain drop-shadow-xl" onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/400x150/F6D10D/0838A8?text=Logo+Here'; }} />
+                        </div>
+                    </div>
+
+                    {/* Direct Form on Background */}
+                    <form onSubmit={handleSubmit} className="w-full">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                            
+                            <div className="md:col-span-2">
+                                <label className={labelClasses}>Student Name</label>
+                                <input type="text" name="name" required value={formData.name} onChange={handleChange} className={inputClasses} placeholder="Enter full name" />
+                            </div>
+                            
+                            <div>
+                                <label className={labelClasses}>Gender</label>
+                                <select name="gender" required value={formData.gender} onChange={handleChange} className={inputClasses}>
+                                    <option value="" disabled>Select Gender</option>
+                                    <option value="Male">Male</option>
+                                    <option value="Female">Female</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className={labelClasses}>Guardian Name</label>
+                                <input type="text" name="guardian" required value={formData.guardian} onChange={handleChange} className={inputClasses} placeholder="Parent/Guardian" />
+                            </div>
+                            
+                            <div className="md:col-span-2">
+                                <label className={labelClasses}>School Name</label>
+                                <input type="text" name="schoolName" required value={formData.schoolName} onChange={handleChange} className={inputClasses} placeholder="Enter school name" />
+                            </div>
+                            
+                            <div className="md:col-span-2">
+                                <label className={labelClasses}>House Name</label>
+                                <input type="text" name="houseName" required value={formData.houseName} onChange={handleChange} className={inputClasses} placeholder="House name" />
+                            </div>
+                            
+                            <div>
+                                <label className={labelClasses}>Place</label>
+                                <input type="text" name="place" required value={formData.place} onChange={handleChange} className={inputClasses} placeholder="City/Town" />
+                            </div>
+                            
+                            <div>
+                                <label className={labelClasses}>Post Office</label>
+                                <input type="text" name="postOffice" required value={formData.postOffice} onChange={handleChange} className={inputClasses} placeholder="Post Office" />
+                            </div>
+                            
+                            <div>
+                                <label className={labelClasses}>PIN Code</label>
+                                <input type="tel" name="pinCode" pattern="[0-9]{6}" required value={formData.pinCode} onChange={handleChange} className={inputClasses} placeholder="6 digit PIN" />
+                            </div>
+                            
+                            <div>
+                                <label className={labelClasses}>Panchayat / Municipality</label>
+                                <select name="panchayat" required value={formData.panchayat} onChange={handleChange} className={inputClasses}>
+                                    <option value="" disabled>Select Location</option>
+                                    {panchayats.map(p => <option key={p} value={p}>{p}</option>)}
+                                </select>
+                            </div>
+                            
+                            <div className="md:col-span-2">
+                                <label className={labelClasses}>Ward Number</label>
+                                <input type="number" name="ward" required value={formData.ward} onChange={handleChange} className={inputClasses} placeholder="Enter ward number" />
+                            </div>
+                            
+                            <div>
+                                <label className={labelClasses}>Mobile Number</label>
+                                <input type="tel" name="phone" pattern="[0-9]{10}" required value={formData.phone} onChange={handleChange} className={inputClasses} placeholder="10 digit mobile" />
+                            </div>
+                            
+                            <div>
+                                <div className="flex justify-between items-center mb-1.5 ml-1">
+                                    <label className="block text-sm font-semibold text-white/90">WhatsApp Number</label>
+                                    <label className="flex items-center gap-1.5 cursor-pointer text-xs font-bold text-white bg-white/20 px-2 py-0.5 rounded backdrop-blur-sm">
+                                        <input type="checkbox" checked={sameAsPhone} onChange={handleSameAsPhoneToggle} className="w-3.5 h-3.5 rounded text-brand-blue border-none focus:ring-0" />
+                                        Same as Mobile
+                                    </label>
+                                </div>
+                                <input type="tel" name="whatsapp" pattern="[0-9]{10}" required value={formData.whatsapp} onChange={handleChange} disabled={sameAsPhone} className={`${inputClasses} ${sameAsPhone ? 'opacity-80 bg-gray-200 cursor-not-allowed' : ''}`} placeholder="10 digit WhatsApp" />
+                            </div>
+                            
+                            <div className="md:col-span-2 mt-4" id="category-section">
+                                <label className={labelClasses}>Category <span className="text-red-400">*</span></label>
+                                <div className={`grid grid-cols-2 sm:grid-cols-5 gap-2.5 p-2 rounded-xl transition-all duration-300 ${submitAttempted && !formData.category ? 'bg-red-500/20 border-2 border-red-400 shadow-[0_0_20px_rgba(239,68,68,0.4)]' : 'border-2 border-transparent'}`}>
+                                    {['SSLC', 'Plus Two', 'LSS', 'USS', 'NMMS'].map(cat => (
+                                        <label key={cat} className={`flex items-center justify-center py-3 rounded-xl cursor-pointer transition-all border ${formData.category === cat ? 'bg-brand-yellow border-brand-yellow text-[#0838A8] font-bold shadow-md' : 'bg-white/10 border-white/20 text-white hover:bg-white/20 font-semibold'}`}>
+                                            <input type="radio" name="category" value={cat} checked={formData.category === cat} onChange={handleChange} className="opacity-0 absolute w-0 h-0" />
+                                            {cat}
+                                        </label>
+                                    ))}
+                                </div>
+                                {submitAttempted && !formData.category && (
+                                    <p className="text-red-300 text-sm font-bold mt-2 ml-1 animate-fade-in flex items-center gap-1.5">
+                                        <i className="ph-fill ph-warning-circle text-lg"></i> Please select a category to proceed.
+                                    </p>
+                                )}
+                            </div>
+
+                            {(formData.category === 'SSLC' || formData.category === 'Plus Two') && (
+                                <div className="animate-fade-in md:col-span-2">
+                                    <label className={labelClasses}>Number of A+ Grades</label>
+                                    <select name="aPlus" required value={formData.aPlus} onChange={handleChange} className={inputClasses}>
+                                        <option value="" disabled>Select Total A+ Grades</option>
+                                        {aPlusOptions.map(num => (
+                                            <option key={num} value={num}>{num} A+</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="pt-2 pb-10">
+                            <Button type="submit" className="w-full text-lg sm:text-xl py-4" disabled={loading}>
+                                {loading ? <i className="ph-fill ph-spinner-gap animate-spin text-3xl"></i> : 'Register Now'}
+                            </Button>
+                        </div>
+                    </form>
+                </div>
+            );
+        };
+
+        const SuccessView = ({ data, setView }) => {
+            const passRef = useRef(null);
+            const [toast, setToast] = useState(null);
+            const [isSharing, setIsSharing] = useState(false);
+            
+            const handleDownloadPDF = () => {
+                const element = passRef.current;
+                element.classList.add('is-printing');
+                const opt = {
+                    margin: 0,
+                    filename: `${data.regId}_TanurTare.pdf`,
+                    image: { type: 'jpeg', quality: 1 },
+                    html2canvas: { scale: 3, useCORS: true, backgroundColor: '#0838A8' },
+                    jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+                };
+                html2pdf().set(opt).from(element).save().then(() => {
+                    element.classList.remove('is-printing');
+                });
+            };
+
+            const handleShareWhatsApp = async () => {
+                if (isSharing) return;
+                setIsSharing(true);
+                
+                try {
+                    // Ensure fonts are fully loaded before capturing
+                    await document.fonts.ready;
+                    
+                    const canvas = await html2canvas(passRef.current, {
+                        scale: 2,
+                        backgroundColor: '#0A4ED5',
+                        useCORS: true,
+                        logging: false // Disable logging for slight speed boost
+                    });
+                    
+                    canvas.toBlob(async (blob) => {
+                        if (!blob) throw new Error('Canvas generation failed');
+                        const file = new File([blob], `TanurTare_${data.regId}.png`, { type: "image/png" });
+                        
+                        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                            try {
+                                await navigator.share({
+                                    files: [file],
+                                    title: 'താനൂർ താരേ Entry Pass',
+                                    text: `Here is my entry pass for Stars of Tanur! Reg ID: ${data.regId}`
+                                });
+                            } catch (err) {
+                                // Ignore AbortError (user closed the share sheet)
+                                if (err.name !== 'AbortError') {
+                                    console.log("Share failed", err);
+                                    setToast({ message: 'Sharing failed. Try downloading instead.', type: 'error' });
+                                }
+                            }
+                        } else {
+                            // Fallback for unsupported browsers
+                            const link = document.createElement('a');
+                            link.download = `TanurTare_${data.regId}.png`;
+                            link.href = canvas.toDataURL('image/png');
+                            link.click();
+                            setToast({ message: 'Pass downloaded! Please share it from your gallery.', type: 'info' });
+                        }
+                        setIsSharing(false);
+                    }, 'image/png');
+                } catch (error) {
+                    console.error("Error generating image", error);
+                    setToast({ message: 'Failed to prepare pass for sharing', type: 'error' });
+                    setIsSharing(false);
+                }
+            };
+
+            if (!data) return null;
+
+            return (
+                <div className="max-w-md mx-auto px-4 py-12 animate-fade-in relative z-10">
+                    {toast && <Toast {...toast} onClose={() => setToast(null)} />}
+                    
+                    <div className="text-center mb-6 pdf-hide text-white">
+                        <div className="w-16 h-16 bg-brand-success text-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+                            <i className="ph-fill ph-check-circle text-4xl"></i>
+                        </div>
+                        <h2 className="text-2xl font-bold mb-1">Registration Complete!</h2>
+                    </div>
+
+                    {/* The Pass Card */}
+                    <div ref={passRef} className="pass-container rounded-2xl shadow-2xl overflow-hidden mb-6">
+                        <div className="bg-[#0A4ED5] px-6 py-6 flex flex-col items-center text-center text-white relative">
+                            <h2 className="text-3xl font-black font-malayalam tracking-tight">താനൂർ <span className="text-brand-yellow">താരേ</span></h2>
+                            <p className="text-xs font-bold uppercase tracking-widest text-brand-yellow mt-1">Entry Pass</p>
+                        </div>
+                        
+                        <div className="p-6 flex flex-col items-center">
+                            <QRCodeComponent value={data.regId} size={140} />
+                            
+                            <div className="mt-4 bg-gray-100 px-5 py-1.5 rounded-full mb-6">
+                                <p className="text-2xl font-black font-mono text-brand-blue tracking-wider">{data.regId}</p>
+                            </div>
+
+                            <div className="w-full space-y-4">
+                                <div className="text-center border-b border-gray-100 pb-3">
+                                    <p className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-1">Student Name</p>
+                                    <p className="text-2xl font-black text-brand-text capitalize">{data.name}</p>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4 text-center pb-3 border-b border-gray-100">
+                                    <div>
+                                        <p className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-1">Category</p>
+                                        <p className="text-lg font-bold text-brand-blue">{data.category}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-1">Gender</p>
+                                        <p className="text-lg font-bold text-gray-800">{data.gender}</p>
+                                    </div>
+                                </div>
+                                <div className="text-center">
+                                    <p className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-1">Location</p>
+                                    <p className="text-base font-bold text-gray-800">{data.houseName}, {data.place}</p>
+                                    <p className="text-sm font-semibold text-gray-500">{data.panchayat}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex flex-col sm:flex-row justify-center gap-3 pdf-hide">
+                        <Button onClick={handleShareWhatsApp} className="w-full bg-[#25D366] hover:bg-[#128C7E] text-white" disabled={isSharing}>
+                            {isSharing ? <i className="ph-fill ph-spinner-gap animate-spin text-2xl"></i> : <i className="ph-fill ph-whatsapp-logo text-2xl"></i>}
+                            {isSharing ? 'Preparing...' : 'Share Pass'}
+                        </Button>
+                        <Button onClick={handleDownloadPDF} variant="secondary" className="w-full">
+                            <i className="ph-bold ph-download-simple text-xl"></i> Save PDF
+                        </Button>
+                    </div>
+                    
+                    <button onClick={() => setView('home')} className="mt-6 text-white/70 hover:text-white text-sm font-semibold w-full text-center pdf-hide flex items-center justify-center gap-2">
+                        <i className="ph-bold ph-arrow-left"></i> Back to Home
+                    </button>
+                </div>
+            );
+        };
+
+        const AdminDashboard = ({ data }) => {
+            const chartRef = useRef(null);
+            const chartInstance = useRef(null);
+
+            const stats = useMemo(() => {
+                const s = { total: data.length, boys: 0, girls: 0, attended: 0, pending: 0, categories: {} };
+                data.forEach(r => {
+                    if (r.gender === 'Male') s.boys++;
+                    if (r.gender === 'Female') s.girls++;
+                    if (r.status === 'Attended') s.attended++;
+                    else s.pending++;
+                    s.categories[r.category] = (s.categories[r.category] || 0) + 1;
+                });
+                return s;
+            }, [data]);
+
+            useEffect(() => {
+                if (chartRef.current) {
+                    if (chartInstance.current) chartInstance.current.destroy();
+                    const ctx = chartRef.current.getContext('2d');
+                    chartInstance.current = new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: Object.keys(stats.categories),
+                            datasets: [{
+                                label: 'Registrations',
+                                data: Object.values(stats.categories),
+                                backgroundColor: '#F6D10D',
+                                borderRadius: 8
+                            }]
+                        },
+                        options: {
+                            responsive: true, maintainAspectRatio: false,
+                            plugins: { legend: { display: false } },
+                            scales: { y: { beginAtZero: true } }
+                        }
+                    });
+                }
+            }, [stats]);
+
+            const StatCard = ({ title, value, icon, colorClass }) => (
+                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl ${colorClass}`}>
+                        <i className={`ph-fill ${icon}`}></i>
+                    </div>
+                    <div>
+                        <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">{title}</p>
+                        <p className="text-2xl font-black text-brand-text">{value}</p>
+                    </div>
+                </div>
+            );
+
+            return (
+                <div className="space-y-6 animate-fade-in p-6">
+                    <h2 className="text-2xl font-black text-brand-text">Dashboard Overview</h2>
+                    <div className="grid grid-cols-2 xl:grid-cols-5 gap-4">
+                        <StatCard title="Total" value={stats.total} icon="ph-users" colorClass="bg-blue-100 text-brand-blue" />
+                        <StatCard title="Attended" value={stats.attended} icon="ph-check-circle" colorClass="bg-green-100 text-brand-success" />
+                        <StatCard title="Pending" value={stats.pending} icon="ph-clock" colorClass="bg-yellow-100 text-yellow-600" />
+                        <StatCard title="Boys" value={stats.boys} icon="ph-gender-male" colorClass="bg-purple-100 text-purple-600" />
+                        <StatCard title="Girls" value={stats.girls} icon="ph-gender-female" colorClass="bg-pink-100 text-pink-600" />
+                    </div>
+                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                        <h3 className="font-bold text-brand-text mb-4">Registrations by Category</h3>
+                        <div className="h-64"><canvas ref={chartRef}></canvas></div>
+                    </div>
+                </div>
+            );
+        };
+
+        const AdminRegistrations = ({ data }) => {
+            const [search, setSearch] = useState('');
+            
+            const filteredData = useMemo(() => {
+                return data.filter(r => 
+                    r.name.toLowerCase().includes(search.toLowerCase()) || 
+                    r.regId.toLowerCase().includes(search.toLowerCase()) ||
+                    r.phone.includes(search)
+                );
+            }, [data, search]);
+
+            const exportExcel = () => {
+                const ws = XLSX.utils.json_to_sheet(filteredData);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, "Registrations");
+                XLSX.writeFile(wb, "Tanur_Tare_Registrations.xlsx");
+            };
+
+            return (
+                <div className="bg-white m-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col h-[calc(100vh-3rem)] animate-fade-in">
+                    <div className="p-4 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-center gap-4 shrink-0">
+                        <div className="relative w-full sm:w-80">
+                            <i className="ph-bold ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                            <input 
+                                type="text" 
+                                placeholder="Search name, ID or phone..." 
+                                value={search} onChange={e => setSearch(e.target.value)}
+                                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-blue/30 font-medium text-sm"
+                            />
+                        </div>
+                        <Button onClick={exportExcel} className="w-full sm:w-auto py-2.5 px-4 bg-green-500 text-white shadow-none text-sm">
+                            <i className="ph-bold ph-download-simple"></i> Export Excel
+                        </Button>
+                    </div>
+                    
+                    <div className="flex-1 overflow-auto">
+                        <table className="w-full text-left text-sm whitespace-nowrap">
+                            <thead className="text-gray-500 bg-gray-50 uppercase text-xs font-bold sticky top-0 z-10">
+                                <tr>
+                                    <th className="px-6 py-3">Reg ID</th>
+                                    <th className="px-6 py-3">Name</th>
+                                    <th className="px-6 py-3">School</th>
+                                    <th className="px-6 py-3">Category</th>
+                                    <th className="px-6 py-3">Phone</th>
+                                    <th className="px-6 py-3">Panchayat</th>
+                                    <th className="px-6 py-3">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100 font-medium text-gray-700">
+                                {filteredData.map(r => (
+                                    <tr key={r.regId} className="hover:bg-blue-50/50">
+                                        <td className="px-6 py-3 font-mono font-bold text-brand-blue">{r.regId}</td>
+                                        <td className="px-6 py-3 capitalize">{r.name}</td>
+                                        <td className="px-6 py-3 truncate max-w-[150px]">{r.schoolName}</td>
+                                        <td className="px-6 py-3">{r.category} {r.aPlus && <span className="text-xs text-red-500 ml-1">({r.aPlus} A+)</span>}</td>
+                                        <td className="px-6 py-3">{r.phone}</td>
+                                        <td className="px-6 py-3">{r.panchayat}</td>
+                                        <td className="px-6 py-3">
+                                            <span className={`px-2.5 py-1 rounded-md text-xs font-bold ${r.status === 'Attended' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                                                {r.status}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            );
+        };
+
+        const AdminAttendance = ({ data, refreshData }) => {
+            const [query, setQuery] = useState('');
+            const [toast, setToast] = useState(null);
+            const scannerRef = useRef(null);
+
+            useEffect(() => {
+                const scanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: {width: 250, height: 250} }, false);
+                scannerRef.current = scanner;
+                
+                scanner.render((decodedText) => {
+                    handleMark(decodedText);
+                }, (error) => {});
+
+                return () => {
+                    if (scannerRef.current) scannerRef.current.clear();
+                };
+            }, [data]);
+
+            const handleMark = async (searchStr) => {
+                const reg = data.find(r => r.regId === searchStr || r.phone === searchStr);
+                if (!reg) {
+                    setToast({ message: 'Not found: ' + searchStr, type: 'error' });
+                } else if (reg.status === 'Attended') {
+                    setToast({ message: `${reg.name} already attended`, type: 'info' });
+                } else {
+                    await MOCK_DB.markAttended([reg.regId]);
+                    setToast({ message: `Marked: ${reg.name} (${reg.regId})`, type: 'success' });
+                    setQuery('');
+                    refreshData();
+                }
+            };
+
+            return (
+                <div className="p-6 animate-fade-in">
+                    {toast && <Toast {...toast} onClose={() => setToast(null)} />}
+                    <h2 className="text-2xl font-black text-brand-text mb-6">Attendance Scanner</h2>
+                    
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                            <h3 className="font-bold mb-4 text-brand-text"><i className="ph-bold ph-camera"></i> Scan QR Code</h3>
+                            <div id="reader" className="rounded-xl overflow-hidden border-2 border-gray-100"></div>
+                        </div>
+
+                        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                            <h3 className="font-bold mb-4 text-brand-text"><i className="ph-bold ph-keyboard"></i> Manual Entry</h3>
+                            <form onSubmit={(e) => { e.preventDefault(); handleMark(query); }}>
+                                <input 
+                                    type="text" 
+                                    value={query} onChange={e => setQuery(e.target.value)}
+                                    placeholder="Enter Reg ID (e.g. TT10-001) or Phone" 
+                                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3.5 mb-4 font-bold text-center uppercase focus:outline-none focus:ring-2 focus:ring-brand-blue"
+                                />
+                                <Button type="submit" className="w-full py-3.5 text-base">Mark Attended</Button>
+                            </form>
+                            
+                            <div className="mt-8">
+                                <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Recent Attendees</h4>
+                                <div className="space-y-2">
+                                    {data.filter(r => r.status === 'Attended').slice(0, 5).map(r => (
+                                        <div key={r.regId} className="flex justify-between items-center p-3 bg-green-50 rounded-xl border border-green-100">
+                                            <div>
+                                                <p className="font-bold text-green-900 text-sm">{r.name}</p>
+                                                <p className="text-xs text-green-700 font-mono">{r.regId}</p>
+                                            </div>
+                                            <i className="ph-fill ph-check-circle text-xl text-green-500"></i>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const AdminLayout = ({ children, setView, activeTab, setActiveTab }) => {
+            // Apply admin specific styling class to body
+            useEffect(() => {
+                document.body.classList.add('admin-layout');
+                return () => document.body.classList.remove('admin-layout');
+            }, []);
+
+            return (
+                <div className="min-h-screen flex flex-col md:flex-row bg-[#F8FAFC]">
+                    <aside className="w-full md:w-64 bg-white border-r border-gray-200 flex flex-col shrink-0">
+                        <div className="h-20 flex items-center justify-center border-b border-gray-100 bg-[#0838A8] text-white">
+                            <h2 className="font-black font-malayalam text-xl">താനൂർ <span className="text-brand-yellow">താരേ</span></h2>
+                        </div>
+                        <div className="px-4 py-4 flex-1 flex flex-col gap-1.5">
+                            {[
+                                { id: 'dashboard', icon: 'ph-squares-four', label: 'Dashboard' },
+                                { id: 'registrations', icon: 'ph-users', label: 'Registrations' },
+                                { id: 'attendance', icon: 'ph-qr-code', label: 'Attendance' },
+                            ].map(item => (
+                                <button 
+                                    key={item.id}
+                                    onClick={() => setActiveTab(item.id)}
+                                    className={`flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all text-sm ${activeTab === item.id ? 'bg-[#0838A8] text-white shadow-md' : 'text-gray-500 hover:bg-gray-100'}`}
+                                >
+                                    <i className={`ph-bold ${item.icon} text-lg`}></i>
+                                    {item.label}
+                                </button>
+                            ))}
+                        </div>
+                        <div className="p-4 border-t border-gray-100">
+                            <button onClick={() => setView('home')} className="flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-red-500 hover:bg-red-50 w-full transition-colors text-sm">
+                                <i className="ph-bold ph-sign-out text-lg"></i> Exit Admin
+                            </button>
+                        </div>
+                    </aside>
+                    <main className="flex-1 flex flex-col h-screen overflow-y-auto">
+                        {children}
+                    </main>
+                </div>
+            );
+        };
+
+        const App = () => {
+            const [view, setView] = useState('home');
+            const [regData, setRegData] = useState(null);
+            const [adminData, setAdminData] = useState([]);
+            const [adminTab, setAdminTab] = useState('dashboard');
+            const [showPassword, setShowPassword] = useState(false);
+            const [password, setPassword] = useState('');
+
+            const fetchAdminData = async () => {
+                const data = await MOCK_DB.getRegistrations();
+                setAdminData(data);
+            };
+
+            useEffect(() => {
+                if (view === 'admin') fetchAdminData();
+            }, [view, adminTab]);
+
+            const handleAdminLogin = (e) => {
+                e.preventDefault();
+                if (password === 'ttad2026') {
+                    setView('admin');
+                    setShowPassword(false);
+                    setPassword('');
+                } else {
+                    alert("Incorrect Password");
+                }
+            };
+
+            if (view === 'admin') {
+                return (
+                    <AdminLayout setView={setView} activeTab={adminTab} setActiveTab={setAdminTab}>
+                        {adminTab === 'dashboard' && <AdminDashboard data={adminData} />}
+                        {adminTab === 'registrations' && <AdminRegistrations data={adminData} />}
+                        {adminTab === 'attendance' && <AdminAttendance data={adminData} refreshData={fetchAdminData} />}
+                    </AdminLayout>
+                );
+            }
+
+            return (
+                <div className="min-h-screen flex flex-col">
+                    <main className="flex-grow">
+                        {view === 'home' && (
+                            <HomeView 
+                                setView={setView} 
+                                setShowPassword={setShowPassword}
+                                showPassword={showPassword}
+                                handleAdminLogin={handleAdminLogin}
+                                password={password}
+                                setPassword={setPassword}
+                            />
+                        )}
+                        {view === 'search_pass' && <SearchPassView setView={setView} setRegData={setRegData} />}
+                        {view === 'register' && <RegisterView setView={setView} setRegData={setRegData} />}
+                        {view === 'success' && <SuccessView data={regData} setView={setView} />}
+                    </main>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
