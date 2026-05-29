@@ -86,6 +86,19 @@
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
         
+        /* Smooth color shifting animation for Register button */
+        @keyframes color-pass {
+            0% { background-position: 200% center; }
+            100% { background-position: -200% center; }
+        }
+        .btn-animated {
+            background: linear-gradient(90deg, #F6D10D 0%, #FFF5A3 50%, #F6D10D 100%);
+            background-size: 200% auto;
+            animation: color-pass 3.5s linear infinite;
+            color: #0838A8;
+            border: none;
+        }
+        
         /* Select dropdown arrow customization */
         select {
             appearance: none;
@@ -222,13 +235,42 @@
             return <canvas ref={canvasRef} className="rounded-xl shadow-sm border-4 border-white"></canvas>;
         };
 
+        const HeaderGraphics = ({ showLogo = true }) => (
+            <div className="text-center mb-4 flex flex-col items-center w-full">
+                {/* Header Banner - Moderately Big */}
+                <div className="w-[75%] sm:w-[65%] max-w-[320px] flex justify-center mb-0">
+                    <img src="src/banner.png" alt="Header" className="w-full rounded-2xl object-cover shadow-lg border border-white/10" onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/800x250/0A4ED5/FFFFFF?text=Header+Banner'; }} />
+                </div>
+
+                {showLogo && (
+                    <>
+                        {/* Malayalam Text */}
+                        <p className="text-white text-[12px] sm:text-[14px] font-semibold font-malayalam tracking-wide mb-1 mt-2 opacity-90 leading-none">
+                            പികെ നവാസ് എംഎൽഎ സംഘടിപ്പിക്കുന്ന
+                        </p>
+
+                        {/* Logo - Moderately Big */}
+                        <div className="w-full flex justify-center mt-2 mb-2">
+                            <img src="src/logo.png" alt="Logo" className="w-64 sm:w-80 h-auto object-contain drop-shadow-2xl" onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/400x150/F6D10D/0838A8?text=Logo+Here'; }} />
+                        </div>
+                    </>
+                )}
+            </div>
+        );
+
         // --- Views ---
         const HomeView = ({ setView, setShowPassword, showPassword, handleAdminLogin, password, setPassword }) => {
             return (
-                <div className="max-w-md mx-auto px-4 py-8 animate-fade-in flex flex-col items-center min-h-[90vh] justify-between relative z-10">
-                    <div className="w-full flex flex-col items-center">
+                <div className="max-w-md mx-auto px-4 pt-2 pb-8 animate-fade-in flex flex-col items-center min-h-[120vh] relative z-10">
+                    
+                    {/* Header injected into Home screen above poster (Logo is hidden here) */}
+                    <div className="w-full mb-3 mt-4">
+                        <HeaderGraphics showLogo={false} />
+                    </div>
+
+                    <div className="w-full flex flex-col items-center mt-2">
                         {/* Poster */}
-                        <div className="w-full max-w-[400px] aspect-[4/5] rounded-2xl overflow-hidden shadow-2xl mb-8 border-4 border-white/20">
+                        <div className="w-full max-w-[340px] aspect-[4/5] rounded-2xl overflow-hidden shadow-2xl mb-8 border-4 border-white/20">
                             <img 
                                 src="src/poster.jpeg" 
                                 onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/800x1000/0838A8/F6D10D?text=Stars+of+Tanur+Poster'; }}
@@ -237,10 +279,10 @@
                             />
                         </div>
 
-                        {/* Register Button */}
-                        <Button onClick={() => setView('register')} className="w-full text-lg py-4 mb-5 shadow-[0_8px_30px_rgb(246,209,13,0.3)] hover:shadow-[0_8px_30px_rgb(246,209,13,0.5)]">
+                        {/* Register Button with continuous animation */}
+                        <button onClick={() => setView('register')} className="btn-animated w-full text-lg py-4 mb-5 rounded-xl font-black shadow-[0_8px_30px_rgb(246,209,13,0.3)] hover:shadow-[0_8px_30px_rgb(246,209,13,0.5)] transition-transform hover:scale-[1.02] flex items-center justify-center gap-2">
                             <i className="ph-bold ph-pencil-simple text-xl"></i> Register Now
-                        </Button>
+                        </button>
 
                         {/* Search Pass Link */}
                         <button onClick={() => setView('search_pass')} className="text-white hover:text-brand-yellow font-semibold transition-colors flex items-center gap-2">
@@ -248,8 +290,8 @@
                         </button>
                     </div>
 
-                    {/* Admin Access Footer */}
-                    <footer className="mt-12 w-full flex flex-col items-center">
+                    {/* Admin Access Footer - Pushed way down so it's not on first scroll */}
+                    <footer className="mt-auto pt-48 pb-4 w-full flex flex-col items-center">
                         {showPassword ? (
                             <form onSubmit={handleAdminLogin} className="flex gap-2 bg-white/10 p-2 rounded-xl backdrop-blur-md border border-white/20 animate-fade-in">
                                 <input 
@@ -264,7 +306,7 @@
                                 <button type="button" onClick={() => setShowPassword(false)} className="bg-red-500 text-white px-2 py-2 rounded-lg text-sm"><i className="ph-bold ph-x"></i></button>
                             </form>
                         ) : (
-                            <button onClick={() => setShowPassword(true)} className="opacity-30 hover:opacity-100 text-white transition-opacity text-xs font-bold px-4 py-2 flex items-center gap-2">
+                            <button onClick={() => setShowPassword(true)} className="opacity-20 hover:opacity-100 text-white transition-opacity text-[10px] font-bold px-4 py-2 flex items-center gap-2">
                                 <i className="ph-bold ph-lock-key"></i> Admin Access
                             </button>
                         )}
@@ -298,11 +340,11 @@
             const inputClasses = "w-full bg-white border-0 text-brand-text rounded-xl px-6 py-3.5 focus:outline-none focus:ring-4 focus:ring-brand-yellow/50 transition-all font-semibold text-base shadow-sm";
 
             return (
-                <div className="max-w-md mx-auto px-4 py-12 animate-fade-in relative z-10">
+                <div className="max-w-md mx-auto px-4 pt-4 pb-12 animate-fade-in relative z-10">
                     {toast && <Toast {...toast} onClose={() => setToast(null)} />}
 
-                    <button onClick={() => setView('home')} className="text-white/70 hover:text-white flex items-center gap-2 mb-6 font-semibold bg-white/10 px-4 py-2 rounded-lg backdrop-blur-sm border border-white/10 w-fit">
-                        <i className="ph-bold ph-arrow-left"></i> Back to Home
+                    <button onClick={() => setView('home')} className="text-white/70 hover:text-white flex items-center gap-1 mb-4 text-[11px] font-semibold bg-white/10 px-2.5 py-1 rounded-md backdrop-blur-sm border border-white/10 w-fit">
+                        <i className="ph-bold ph-arrow-left"></i> Back
                     </button>
 
                     <div className="text-center mb-8">
@@ -407,10 +449,8 @@
                 e.preventDefault();
                 setSubmitAttempted(true);
                 
-                // Strict manual validation for custom radio buttons
                 if (!formData.category) {
                     setToast({ message: 'Please select a Category below', type: 'error' });
-                    // Scroll down to category section slightly
                     const element = document.getElementById('category-section');
                     if(element) element.scrollIntoView({ behavior: 'smooth', block: 'center' });
                     return;
@@ -432,7 +472,6 @@
                 }
             };
 
-            // International standard inputs on pure blue background - increased left/right padding (px-6)
             const inputClasses = "w-full bg-white border-0 text-brand-text rounded-xl px-6 py-3.5 focus:outline-none focus:ring-4 focus:ring-brand-yellow/50 transition-all font-semibold text-base shadow-sm";
             const labelClasses = "block text-sm font-semibold text-white/90 mb-1.5 ml-1";
 
@@ -440,34 +479,20 @@
             const aPlusOptions = Array.from({length: maxAPlus}, (_, i) => i + 1);
 
             return (
-                <div className="max-w-2xl mx-auto px-4 py-6 md:py-10 animate-fade-in relative z-10">
+                <div className="max-w-2xl mx-auto px-4 pt-1 pb-6 md:py-6 animate-fade-in relative z-10">
                     {toast && <Toast {...toast} onClose={() => setToast(null)} />}
                     
-                    <button onClick={() => setView('home')} className="text-white/70 hover:text-white flex items-center gap-2 mb-6 font-semibold bg-white/10 px-4 py-2 rounded-lg backdrop-blur-sm border border-white/10 w-fit">
-                        <i className="ph-bold ph-arrow-left"></i> Back to Home
+                    {/* Small back button */}
+                    <button onClick={() => setView('home')} className="text-white/70 hover:text-white flex items-center gap-1 mb-1 text-[11px] font-semibold bg-white/10 px-2.5 py-1 rounded-md backdrop-blur-sm border border-white/10 w-fit">
+                        <i className="ph-bold ph-arrow-left"></i> Back
                     </button>
 
-                    {/* Header Graphics */}
-                    <div className="text-center mb-10 flex flex-col items-center">
-                        {/* Header Banner - No shadow */}
-                        <div className="w-full flex justify-center mb-1">
-                            <img src="src/banner.png" alt="Header" className="w-full rounded-2xl object-cover" onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/800x250/0A4ED5/FFFFFF?text=Header+Banner'; }} />
-                        </div>
+                    {/* Logo is shown here in the Registration Page */}
+                    <HeaderGraphics showLogo={true} />
 
-                        {/* Malayalam Text */}
-                        <p className="text-white text-sm font-semibold font-malayalam tracking-wide mb-0 mt-1 opacity-90">
-                            പികെ നവാസ് എംഎൽഎ സംഘടിപ്പിക്കുന്ന
-                        </p>
-
-                        {/* Logo */}
-                        <div className="w-full flex justify-center mb-2 mt-1">
-                            <img src="src/logo.png" alt="Logo" className="w-80 sm:w-[400px] h-auto object-contain drop-shadow-xl" onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/400x150/F6D10D/0838A8?text=Logo+Here'; }} />
-                        </div>
-                    </div>
-
-                    {/* Direct Form on Background */}
-                    <form onSubmit={handleSubmit} className="w-full">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                    {/* Direct Form on Background - Tight spacing */}
+                    <form onSubmit={handleSubmit} className="w-full mt-2">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6 mt-0">
                             
                             <div className="md:col-span-2">
                                 <label className={labelClasses}>Student Name</label>
@@ -542,7 +567,7 @@
                                 <input type="tel" name="whatsapp" pattern="[0-9]{10}" required value={formData.whatsapp} onChange={handleChange} disabled={sameAsPhone} className={`${inputClasses} ${sameAsPhone ? 'opacity-80 bg-gray-200 cursor-not-allowed' : ''}`} placeholder="10 digit WhatsApp" />
                             </div>
                             
-                            <div className="md:col-span-2 mt-4" id="category-section">
+                            <div className="md:col-span-2 mt-2" id="category-section">
                                 <label className={labelClasses}>Category <span className="text-red-400">*</span></label>
                                 <div className={`grid grid-cols-2 sm:grid-cols-5 gap-2.5 p-2 rounded-xl transition-all duration-300 ${submitAttempted && !formData.category ? 'bg-red-500/20 border-2 border-red-400 shadow-[0_0_20px_rgba(239,68,68,0.4)]' : 'border-2 border-transparent'}`}>
                                     {['SSLC', 'Plus Two', 'LSS', 'USS', 'NMMS'].map(cat => (
@@ -607,14 +632,13 @@
                 setIsSharing(true);
                 
                 try {
-                    // Ensure fonts are fully loaded before capturing
                     await document.fonts.ready;
                     
                     const canvas = await html2canvas(passRef.current, {
                         scale: 2,
                         backgroundColor: '#0A4ED5',
                         useCORS: true,
-                        logging: false // Disable logging for slight speed boost
+                        logging: false 
                     });
                     
                     canvas.toBlob(async (blob) => {
@@ -629,14 +653,12 @@
                                     text: `Here is my entry pass for Stars of Tanur! Reg ID: ${data.regId}`
                                 });
                             } catch (err) {
-                                // Ignore AbortError (user closed the share sheet)
                                 if (err.name !== 'AbortError') {
                                     console.log("Share failed", err);
                                     setToast({ message: 'Sharing failed. Try downloading instead.', type: 'error' });
                                 }
                             }
                         } else {
-                            // Fallback for unsupported browsers
                             const link = document.createElement('a');
                             link.download = `TanurTare_${data.regId}.png`;
                             link.href = canvas.toDataURL('image/png');
@@ -655,9 +677,13 @@
             if (!data) return null;
 
             return (
-                <div className="max-w-md mx-auto px-4 py-12 animate-fade-in relative z-10">
+                <div className="max-w-md mx-auto px-4 pt-4 pb-12 animate-fade-in relative z-10">
                     {toast && <Toast {...toast} onClose={() => setToast(null)} />}
                     
+                    <button onClick={() => setView('home')} className="text-white/70 hover:text-white flex items-center gap-1 mb-4 text-[11px] font-semibold bg-white/10 px-2.5 py-1 rounded-md backdrop-blur-sm border border-white/10 w-fit pdf-hide">
+                        <i className="ph-bold ph-arrow-left"></i> Back
+                    </button>
+
                     <div className="text-center mb-6 pdf-hide text-white">
                         <div className="w-16 h-16 bg-brand-success text-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
                             <i className="ph-fill ph-check-circle text-4xl"></i>
@@ -713,10 +739,6 @@
                             <i className="ph-bold ph-download-simple text-xl"></i> Save PDF
                         </Button>
                     </div>
-                    
-                    <button onClick={() => setView('home')} className="mt-6 text-white/70 hover:text-white text-sm font-semibold w-full text-center pdf-hide flex items-center justify-center gap-2">
-                        <i className="ph-bold ph-arrow-left"></i> Back to Home
-                    </button>
                 </div>
             );
         };
