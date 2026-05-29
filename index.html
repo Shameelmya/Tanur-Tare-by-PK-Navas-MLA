@@ -8,7 +8,7 @@
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Anek+Malayalam:wght@400;600;700;800&family=Sora:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Anek+Malayalam:wght@300;400;600;700;800&family=Sora:wght@300;400;600;700;800&display=swap" rel="stylesheet">
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -30,6 +30,13 @@
                     fontFamily: {
                         sans: ['Sora', 'sans-serif'],
                         malayalam: ['Anek Malayalam', 'sans-serif'],
+                    },
+                    fontWeight: {
+                        light: 300,
+                        normal: 400,
+                        semibold: 600,
+                        bold: 700,
+                        black: 800
                     },
                     borderRadius: {
                         'xl': '16px',
@@ -64,6 +71,7 @@
             color: #1E293B;
             -webkit-font-smoothing: antialiased;
             min-height: 100vh;
+            font-weight: 300; /* Set global font weight to light */
         }
 
         /* Override background for admin panel */
@@ -114,6 +122,29 @@
 
     <script type="text/babel">
         const { useState, useEffect, useRef, useMemo } = React;
+
+        // --- Gesture Hook for Swipe to Back ---
+        const useSwipeBack = (onBack) => {
+            const [touchStart, setTouchStart] = useState(null);
+            const [touchEnd, setTouchEnd] = useState(null);
+
+            const onTouchStart = (e) => {
+                setTouchEnd(null);
+                setTouchStart(e.targetTouches[0].clientX);
+            };
+
+            const onTouchMove = (e) => setTouchEnd(e.targetTouches[0].clientX);
+
+            const onTouchEnd = () => {
+                if (!touchStart || !touchEnd) return;
+                const distance = touchStart - touchEnd;
+                if (Math.abs(distance) > 60) {
+                    onBack();
+                }
+            };
+
+            return { onTouchStart, onTouchMove, onTouchEnd };
+        };
 
         // --- Mock Database (In-Memory) ---
         const MOCK_DB = {
@@ -237,40 +268,96 @@
 
         const HeaderGraphics = ({ showLogo = true }) => (
             <div className="text-center mb-4 flex flex-col items-center w-full">
-                {/* Header Banner - Moderately Big */}
-                <div className="w-[75%] sm:w-[65%] max-w-[320px] flex justify-center mb-0">
-                    <img src="src/banner.png" alt="Header" className="w-full rounded-2xl object-cover shadow-lg border border-white/10" onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/800x250/0A4ED5/FFFFFF?text=Header+Banner'; }} />
+                <div className="w-[85%] sm:w-[80%] max-w-[400px] flex justify-center mb-0 mt-2">
+                    <img src="src/banner.png" alt="Header" className="w-full object-contain" onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/800x300/0A4ED5/FFFFFF?text=Header+Banner'; }} />
                 </div>
-
                 {showLogo && (
                     <>
-                        {/* Malayalam Text */}
-                        <p className="text-white text-[12px] sm:text-[14px] font-semibold font-malayalam tracking-wide mb-1 mt-2 opacity-90 leading-none">
+                        <p className="text-white text-[12px] sm:text-[14px] font-light font-malayalam tracking-wide mb-1 mt-3 opacity-90 leading-none">
                             പികെ നവാസ് എംഎൽഎ സംഘടിപ്പിക്കുന്ന
                         </p>
-
-                        {/* Logo - Moderately Big */}
                         <div className="w-full flex justify-center mt-2 mb-2">
-                            <img src="src/logo.png" alt="Logo" className="w-64 sm:w-80 h-auto object-contain drop-shadow-2xl" onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/400x150/F6D10D/0838A8?text=Logo+Here'; }} />
+                            <img src="src/logo.png" alt="Logo" className="w-72 sm:w-80 h-auto object-contain drop-shadow-2xl" onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/400x150/F6D10D/0838A8?text=Logo+Here'; }} />
                         </div>
                     </>
                 )}
             </div>
         );
 
+        const CountdownTimer = () => {
+            const calculateTimeLeft = () => {
+                // Event time: June 8, 2026 at 14:00 (2:00 PM) IST
+                const targetDate = new Date('2026-06-08T14:00:00+05:30').getTime();
+                const now = new Date().getTime();
+                const difference = targetDate - now;
+
+                let timeLeft = {};
+                if (difference > 0) {
+                    timeLeft = {
+                        days: Math.floor(difference / (1000 * 60 * 60 * 24)),
+                        hours: Math.floor((difference / (1000 * 60 * 60)) % 24),
+                        minutes: Math.floor((difference / 1000 / 60) % 60),
+                        seconds: Math.floor((difference / 1000) % 60),
+                    };
+                }
+                return timeLeft;
+            };
+
+            const [timeLeft, setTimeLeft] = useState(calculateTimeLeft());
+
+            useEffect(() => {
+                const timer = setTimeout(() => {
+                    setTimeLeft(calculateTimeLeft());
+                }, 1000);
+                return () => clearTimeout(timer);
+            });
+
+            const timerComponents = [];
+            Object.keys(timeLeft).forEach((interval) => {
+                timerComponents.push(
+                    <div key={interval} className="flex flex-col items-center justify-center bg-white/10 backdrop-blur-md rounded-xl p-2 sm:p-3 w-16 sm:w-20 border border-white/20 shadow-lg">
+                        <span className="text-2xl sm:text-3xl font-black text-brand-yellow drop-shadow-md">
+                            {String(timeLeft[interval]).padStart(2, '0')}
+                        </span>
+                        <span className="text-[9px] sm:text-[10px] font-bold text-white uppercase tracking-widest mt-1 opacity-90">{interval}</span>
+                    </div>
+                );
+            });
+
+            return (
+                <div className="flex gap-2 sm:gap-3 justify-center mb-6 mt-1 w-full max-w-[380px] animate-fade-in">
+                    {timerComponents.length ? timerComponents : (
+                        <div className="bg-white/20 backdrop-blur-md px-6 py-3 rounded-xl border border-white/30">
+                            <span className="text-brand-yellow font-black uppercase tracking-wider text-sm">Event has started!</span>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
         // --- Views ---
         const HomeView = ({ setView, setShowPassword, showPassword, handleAdminLogin, password, setPassword }) => {
+            // Calendar config based on the poster details
+            // 2026-06-08 14:00 IST is 2026-06-08 08:30 UTC
+            const calendarUrl = "https://calendar.google.com/calendar/render?action=TEMPLATE&text=Stars+of+Tanur+-+%E0%B4%A4%E0%B4%BE%E0%B4%A8%E0%B5%82%E0%B5%BC+%E0%B4%A4%E0%B4%BE%E0%B4%B0%E0%B5%87&dates=20260608T083000Z/20260608T113000Z&details=Join+us+for+the+grand+Stars+of+Tanur+event+organized+by+PK+Navas+MLA.+Honoring+the+winners+of+SSLC,+PLUS+TWO,+LSS,+USS,+NMMS+from+Tanur.&location=Emarald+Auditorium,+Kurukkol+-+https://maps.app.goo.gl/EtN48oEttJG5S7BR6?g_st=aw";
+            const mapUrl = "https://maps.app.goo.gl/EtN48oEttJG5S7BR6?g_st=aw";
+
             return (
                 <div className="max-w-md mx-auto px-4 pt-2 pb-8 animate-fade-in flex flex-col items-center min-h-[120vh] relative z-10">
                     
-                    {/* Header injected into Home screen above poster (Logo is hidden here) */}
-                    <div className="w-full mb-3 mt-4">
+                    {/* Header */}
+                    <div className="w-full mb-2 mt-4">
                         <HeaderGraphics showLogo={false} />
                     </div>
 
-                    <div className="w-full flex flex-col items-center mt-2">
-                        {/* Poster */}
-                        <div className="w-full max-w-[340px] aspect-[4/5] rounded-2xl overflow-hidden shadow-2xl mb-8 border-4 border-white/20">
+                    {/* Countdown Timer Added Here */}
+                    <CountdownTimer />
+
+                    {/* Wrapper ensures everything matches poster width exactly */}
+                    <div className="w-full max-w-[380px] flex flex-col items-center mt-0">
+                        
+                        {/* Poster - Bigger */}
+                        <div className="w-full aspect-[4/5] rounded-2xl overflow-hidden shadow-2xl mb-8 border-2 border-white/20">
                             <img 
                                 src="src/poster.jpeg" 
                                 onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/800x1000/0838A8/F6D10D?text=Stars+of+Tanur+Poster'; }}
@@ -279,18 +366,38 @@
                             />
                         </div>
 
-                        {/* Register Button with continuous animation */}
-                        <button onClick={() => setView('register')} className="btn-animated w-full text-lg py-4 mb-5 rounded-xl font-black shadow-[0_8px_30px_rgb(246,209,13,0.3)] hover:shadow-[0_8px_30px_rgb(246,209,13,0.5)] transition-transform hover:scale-[1.02] flex items-center justify-center gap-2">
+                        {/* Register Button - Matches Poster Width */}
+                        <button onClick={() => setView('register')} className="btn-animated w-full text-lg py-4 mb-4 rounded-xl font-black shadow-[0_8px_30px_rgb(246,209,13,0.3)] hover:shadow-[0_8px_30px_rgb(246,209,13,0.5)] transition-transform hover:scale-[1.02] flex items-center justify-center gap-2">
                             <i className="ph-bold ph-pencil-simple text-xl"></i> Register Now
                         </button>
 
+                        {/* Map and Calendar Action Buttons */}
+                        <div className="grid grid-cols-2 gap-3 w-full mb-8">
+                            <a 
+                                href={calendarUrl} 
+                                target="_blank" 
+                                rel="noopener noreferrer" 
+                                className="bg-white/10 border border-white/30 text-white hover:bg-white/20 py-3.5 rounded-xl font-bold transition-colors flex items-center justify-center gap-2 backdrop-blur-sm text-xs text-center shadow-lg"
+                            >
+                                <i className="ph-bold ph-calendar-plus text-lg"></i> Save Event
+                            </a>
+                            <a 
+                                href={mapUrl} 
+                                target="_blank" 
+                                rel="noopener noreferrer" 
+                                className="bg-white/10 border border-white/30 text-white hover:bg-white/20 py-3.5 rounded-xl font-bold transition-colors flex items-center justify-center gap-2 backdrop-blur-sm text-xs text-center shadow-lg"
+                            >
+                                <i className="ph-bold ph-map-pin text-lg text-brand-yellow"></i> View Map
+                            </a>
+                        </div>
+
                         {/* Search Pass Link */}
-                        <button onClick={() => setView('search_pass')} className="text-white hover:text-brand-yellow font-semibold transition-colors flex items-center gap-2">
+                        <button onClick={() => setView('search_pass')} className="text-white/80 hover:text-white font-light text-xs transition-colors flex items-center gap-1.5 border-b border-white/30 pb-0.5 mt-2">
                             Already registered? Get entry pass now <i className="ph-bold ph-arrow-right"></i>
                         </button>
                     </div>
 
-                    {/* Admin Access Footer - Pushed way down so it's not on first scroll */}
+                    {/* Admin Access Footer */}
                     <footer className="mt-auto pt-48 pb-4 w-full flex flex-col items-center">
                         {showPassword ? (
                             <form onSubmit={handleAdminLogin} className="flex gap-2 bg-white/10 p-2 rounded-xl backdrop-blur-md border border-white/20 animate-fade-in">
@@ -316,6 +423,7 @@
         };
 
         const SearchPassView = ({ setView, setRegData }) => {
+            const swipeHandlers = useSwipeBack(() => setView('home'));
             const [searchType, setSearchType] = useState('regId');
             const [formData, setFormData] = useState({ regId: '', name: '', phone: '' });
             const [loading, setLoading] = useState(false);
@@ -337,36 +445,24 @@
                 }
             };
 
-            const inputClasses = "w-full bg-white border-0 text-brand-text rounded-xl px-6 py-3.5 focus:outline-none focus:ring-4 focus:ring-brand-yellow/50 transition-all font-semibold text-base shadow-sm";
+            const inputClasses = "w-full bg-white border-0 text-brand-text rounded-xl px-6 py-3.5 focus:outline-none focus:ring-4 focus:ring-brand-yellow/50 transition-all font-light text-base shadow-sm";
 
             return (
-                <div className="max-w-md mx-auto px-4 pt-4 pb-12 animate-fade-in relative z-10">
+                <div {...swipeHandlers} className="max-w-md mx-auto px-4 pt-12 pb-12 animate-fade-in relative z-10 min-h-screen">
                     {toast && <Toast {...toast} onClose={() => setToast(null)} />}
-
-                    <button onClick={() => setView('home')} className="text-white/70 hover:text-white flex items-center gap-1 mb-4 text-[11px] font-semibold bg-white/10 px-2.5 py-1 rounded-md backdrop-blur-sm border border-white/10 w-fit">
-                        <i className="ph-bold ph-arrow-left"></i> Back
-                    </button>
 
                     <div className="text-center mb-8">
                         <h2 className="text-3xl font-black font-malayalam text-white tracking-tight mb-2">Get Your Pass</h2>
-                        <p className="text-white/80 text-sm font-semibold">Search to download your entry pass.</p>
+                        <p className="text-white/80 text-sm font-light">Search to download your entry pass.</p>
+                        <p className="text-white/50 text-[10px] mt-2">Swipe horizontally to go back</p>
                     </div>
 
                     <div className="bg-white/10 backdrop-blur-md p-6 rounded-2xl border border-white/20 shadow-xl">
-                        {/* Tabs */}
                         <div className="flex bg-white/10 rounded-xl p-1 mb-6">
-                            <button 
-                                type="button" 
-                                onClick={() => setSearchType('regId')} 
-                                className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${searchType === 'regId' ? 'bg-white text-brand-blue shadow-sm' : 'text-white hover:bg-white/10'}`}
-                            >
+                            <button type="button" onClick={() => setSearchType('regId')} className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${searchType === 'regId' ? 'bg-white text-brand-blue shadow-sm' : 'text-white hover:bg-white/10 font-light'}`}>
                                 By Reg ID
                             </button>
-                            <button 
-                                type="button" 
-                                onClick={() => setSearchType('namePhone')} 
-                                className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${searchType === 'namePhone' ? 'bg-white text-brand-blue shadow-sm' : 'text-white hover:bg-white/10'}`}
-                            >
+                            <button type="button" onClick={() => setSearchType('namePhone')} className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${searchType === 'namePhone' ? 'bg-white text-brand-blue shadow-sm' : 'text-white hover:bg-white/10 font-light'}`}>
                                 Name & Mobile
                             </button>
                         </div>
@@ -374,24 +470,24 @@
                         <form onSubmit={handleSearch} className="space-y-4">
                             {searchType === 'regId' ? (
                                 <div className="animate-fade-in">
-                                    <label className="block text-sm font-semibold text-white/90 mb-1.5 ml-1">Registration ID</label>
+                                    <label className="block text-sm font-light text-white/90 mb-1.5 ml-1">Registration ID</label>
                                     <input type="text" required value={formData.regId} onChange={(e) => setFormData({...formData, regId: e.target.value})} placeholder="e.g. TT10-001" className={inputClasses} />
                                 </div>
                             ) : (
                                 <div className="animate-fade-in space-y-4">
                                     <div>
-                                        <label className="block text-sm font-semibold text-white/90 mb-1.5 ml-1">Student Name (Partial match works)</label>
+                                        <label className="block text-sm font-light text-white/90 mb-1.5 ml-1">Student Name (Partial match works)</label>
                                         <input type="text" required value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} placeholder="Enter name" className={inputClasses} />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-semibold text-white/90 mb-1.5 ml-1">Mobile Number</label>
+                                        <label className="block text-sm font-light text-white/90 mb-1.5 ml-1">Mobile Number</label>
                                         <input type="tel" pattern="[0-9]{10}" required value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} placeholder="10 digit mobile" className={inputClasses} />
                                     </div>
                                 </div>
                             )}
 
                             <div className="pt-4">
-                                <Button type="submit" className="w-full text-lg py-3.5" disabled={loading}>
+                                <Button type="submit" className="w-full text-lg py-3.5 font-bold" disabled={loading}>
                                     {loading ? <i className="ph-fill ph-spinner-gap animate-spin text-2xl"></i> : 'Find Entry Pass'}
                                 </Button>
                             </div>
@@ -402,6 +498,8 @@
         };
 
         const RegisterView = ({ setView, setRegData }) => {
+            const swipeHandlers = useSwipeBack(() => setView('home'));
+            
             const panchayats = [
                 "Tanur Municipality", "Ozhur", "Ponmundam", "Tanalur", "Niramaruthur", "Cheriyamundam"
             ];
@@ -472,33 +570,25 @@
                 }
             };
 
-            const inputClasses = "w-full bg-white border-0 text-brand-text rounded-xl px-6 py-3.5 focus:outline-none focus:ring-4 focus:ring-brand-yellow/50 transition-all font-semibold text-base shadow-sm";
-            const labelClasses = "block text-sm font-semibold text-white/90 mb-1.5 ml-1";
+            const inputClasses = "w-full bg-white border-0 text-brand-text rounded-xl px-6 py-3.5 focus:outline-none focus:ring-4 focus:ring-brand-yellow/50 transition-all font-light text-base shadow-sm";
+            const labelClasses = "block text-sm font-light text-white/90 mb-1.5 ml-1";
 
             const maxAPlus = formData.category === 'Plus Two' ? 6 : 10;
             const aPlusOptions = Array.from({length: maxAPlus}, (_, i) => i + 1);
 
             return (
-                <div className="max-w-2xl mx-auto px-4 pt-1 pb-6 md:py-6 animate-fade-in relative z-10">
+                <div {...swipeHandlers} className="max-w-2xl mx-auto px-4 pt-6 pb-6 md:py-6 animate-fade-in relative z-10 min-h-screen">
                     {toast && <Toast {...toast} onClose={() => setToast(null)} />}
                     
-                    {/* Small back button */}
-                    <button onClick={() => setView('home')} className="text-white/70 hover:text-white flex items-center gap-1 mb-1 text-[11px] font-semibold bg-white/10 px-2.5 py-1 rounded-md backdrop-blur-sm border border-white/10 w-fit">
-                        <i className="ph-bold ph-arrow-left"></i> Back
-                    </button>
-
-                    {/* Logo is shown here in the Registration Page */}
                     <HeaderGraphics showLogo={true} />
+                    <p className="text-center text-white/50 text-[10px] mt-0 mb-4 animate-pulse">Swipe left or right to go back</p>
 
-                    {/* Direct Form on Background - Tight spacing */}
                     <form onSubmit={handleSubmit} className="w-full mt-2">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6 mt-0">
-                            
                             <div className="md:col-span-2">
                                 <label className={labelClasses}>Student Name</label>
                                 <input type="text" name="name" required value={formData.name} onChange={handleChange} className={inputClasses} placeholder="Enter full name" />
                             </div>
-                            
                             <div>
                                 <label className={labelClasses}>Gender</label>
                                 <select name="gender" required value={formData.gender} onChange={handleChange} className={inputClasses}>
@@ -507,37 +597,30 @@
                                     <option value="Female">Female</option>
                                 </select>
                             </div>
-
                             <div>
                                 <label className={labelClasses}>Guardian Name</label>
                                 <input type="text" name="guardian" required value={formData.guardian} onChange={handleChange} className={inputClasses} placeholder="Parent/Guardian" />
                             </div>
-                            
                             <div className="md:col-span-2">
                                 <label className={labelClasses}>School Name</label>
                                 <input type="text" name="schoolName" required value={formData.schoolName} onChange={handleChange} className={inputClasses} placeholder="Enter school name" />
                             </div>
-                            
                             <div className="md:col-span-2">
                                 <label className={labelClasses}>House Name</label>
                                 <input type="text" name="houseName" required value={formData.houseName} onChange={handleChange} className={inputClasses} placeholder="House name" />
                             </div>
-                            
                             <div>
                                 <label className={labelClasses}>Place</label>
                                 <input type="text" name="place" required value={formData.place} onChange={handleChange} className={inputClasses} placeholder="City/Town" />
                             </div>
-                            
                             <div>
                                 <label className={labelClasses}>Post Office</label>
                                 <input type="text" name="postOffice" required value={formData.postOffice} onChange={handleChange} className={inputClasses} placeholder="Post Office" />
                             </div>
-                            
                             <div>
                                 <label className={labelClasses}>PIN Code</label>
                                 <input type="tel" name="pinCode" pattern="[0-9]{6}" required value={formData.pinCode} onChange={handleChange} className={inputClasses} placeholder="6 digit PIN" />
                             </div>
-                            
                             <div>
                                 <label className={labelClasses}>Panchayat / Municipality</label>
                                 <select name="panchayat" required value={formData.panchayat} onChange={handleChange} className={inputClasses}>
@@ -545,45 +628,40 @@
                                     {panchayats.map(p => <option key={p} value={p}>{p}</option>)}
                                 </select>
                             </div>
-                            
                             <div className="md:col-span-2">
                                 <label className={labelClasses}>Ward Number</label>
                                 <input type="number" name="ward" required value={formData.ward} onChange={handleChange} className={inputClasses} placeholder="Enter ward number" />
                             </div>
-                            
                             <div>
                                 <label className={labelClasses}>Mobile Number</label>
                                 <input type="tel" name="phone" pattern="[0-9]{10}" required value={formData.phone} onChange={handleChange} className={inputClasses} placeholder="10 digit mobile" />
                             </div>
-                            
                             <div>
                                 <div className="flex justify-between items-center mb-1.5 ml-1">
-                                    <label className="block text-sm font-semibold text-white/90">WhatsApp Number</label>
-                                    <label className="flex items-center gap-1.5 cursor-pointer text-xs font-bold text-white bg-white/20 px-2 py-0.5 rounded backdrop-blur-sm">
+                                    <label className="block text-sm font-light text-white/90">WhatsApp Number</label>
+                                    <label className="flex items-center gap-1.5 cursor-pointer text-xs font-light text-white bg-white/20 px-2 py-0.5 rounded backdrop-blur-sm">
                                         <input type="checkbox" checked={sameAsPhone} onChange={handleSameAsPhoneToggle} className="w-3.5 h-3.5 rounded text-brand-blue border-none focus:ring-0" />
                                         Same as Mobile
                                     </label>
                                 </div>
                                 <input type="tel" name="whatsapp" pattern="[0-9]{10}" required value={formData.whatsapp} onChange={handleChange} disabled={sameAsPhone} className={`${inputClasses} ${sameAsPhone ? 'opacity-80 bg-gray-200 cursor-not-allowed' : ''}`} placeholder="10 digit WhatsApp" />
                             </div>
-                            
                             <div className="md:col-span-2 mt-2" id="category-section">
-                                <label className={labelClasses}>Category <span className="text-red-400">*</span></label>
+                                <label className={`${labelClasses} font-semibold`}>Category <span className="text-red-400">*</span></label>
                                 <div className={`grid grid-cols-2 sm:grid-cols-5 gap-2.5 p-2 rounded-xl transition-all duration-300 ${submitAttempted && !formData.category ? 'bg-red-500/20 border-2 border-red-400 shadow-[0_0_20px_rgba(239,68,68,0.4)]' : 'border-2 border-transparent'}`}>
                                     {['SSLC', 'Plus Two', 'LSS', 'USS', 'NMMS'].map(cat => (
-                                        <label key={cat} className={`flex items-center justify-center py-3 rounded-xl cursor-pointer transition-all border ${formData.category === cat ? 'bg-brand-yellow border-brand-yellow text-[#0838A8] font-bold shadow-md' : 'bg-white/10 border-white/20 text-white hover:bg-white/20 font-semibold'}`}>
+                                        <label key={cat} className={`flex items-center justify-center py-3 rounded-xl cursor-pointer transition-all border ${formData.category === cat ? 'bg-brand-yellow border-brand-yellow text-[#0838A8] font-bold shadow-md' : 'bg-white/10 border-white/20 text-white hover:bg-white/20 font-light'}`}>
                                             <input type="radio" name="category" value={cat} checked={formData.category === cat} onChange={handleChange} className="opacity-0 absolute w-0 h-0" />
                                             {cat}
                                         </label>
                                     ))}
                                 </div>
                                 {submitAttempted && !formData.category && (
-                                    <p className="text-red-300 text-sm font-bold mt-2 ml-1 animate-fade-in flex items-center gap-1.5">
+                                    <p className="text-red-300 text-sm font-light mt-2 ml-1 animate-fade-in flex items-center gap-1.5">
                                         <i className="ph-fill ph-warning-circle text-lg"></i> Please select a category to proceed.
                                     </p>
                                 )}
                             </div>
-
                             {(formData.category === 'SSLC' || formData.category === 'Plus Two') && (
                                 <div className="animate-fade-in md:col-span-2">
                                     <label className={labelClasses}>Number of A+ Grades</label>
@@ -598,7 +676,7 @@
                         </div>
 
                         <div className="pt-2 pb-10">
-                            <Button type="submit" className="w-full text-lg sm:text-xl py-4" disabled={loading}>
+                            <Button type="submit" className="w-full text-lg sm:text-xl py-4 font-bold" disabled={loading}>
                                 {loading ? <i className="ph-fill ph-spinner-gap animate-spin text-3xl"></i> : 'Register Now'}
                             </Button>
                         </div>
@@ -611,6 +689,7 @@
             const passRef = useRef(null);
             const [toast, setToast] = useState(null);
             const [isSharing, setIsSharing] = useState(false);
+            const swipeHandlers = useSwipeBack(() => setView('home'));
             
             const handleDownloadPDF = () => {
                 const element = passRef.current;
@@ -633,7 +712,6 @@
                 
                 try {
                     await document.fonts.ready;
-                    
                     const canvas = await html2canvas(passRef.current, {
                         scale: 2,
                         backgroundColor: '#0A4ED5',
@@ -654,7 +732,6 @@
                                 });
                             } catch (err) {
                                 if (err.name !== 'AbortError') {
-                                    console.log("Share failed", err);
                                     setToast({ message: 'Sharing failed. Try downloading instead.', type: 'error' });
                                 }
                             }
@@ -668,7 +745,6 @@
                         setIsSharing(false);
                     }, 'image/png');
                 } catch (error) {
-                    console.error("Error generating image", error);
                     setToast({ message: 'Failed to prepare pass for sharing', type: 'error' });
                     setIsSharing(false);
                 }
@@ -677,21 +753,17 @@
             if (!data) return null;
 
             return (
-                <div className="max-w-md mx-auto px-4 pt-4 pb-12 animate-fade-in relative z-10">
+                <div {...swipeHandlers} className="max-w-md mx-auto px-4 pt-8 pb-12 animate-fade-in relative z-10 min-h-screen">
                     {toast && <Toast {...toast} onClose={() => setToast(null)} />}
                     
-                    <button onClick={() => setView('home')} className="text-white/70 hover:text-white flex items-center gap-1 mb-4 text-[11px] font-semibold bg-white/10 px-2.5 py-1 rounded-md backdrop-blur-sm border border-white/10 w-fit pdf-hide">
-                        <i className="ph-bold ph-arrow-left"></i> Back
-                    </button>
-
                     <div className="text-center mb-6 pdf-hide text-white">
                         <div className="w-16 h-16 bg-brand-success text-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
                             <i className="ph-fill ph-check-circle text-4xl"></i>
                         </div>
                         <h2 className="text-2xl font-bold mb-1">Registration Complete!</h2>
+                        <p className="text-white/50 text-[10px] mt-2">Swipe horizontally to go to home</p>
                     </div>
 
-                    {/* The Pass Card */}
                     <div ref={passRef} className="pass-container rounded-2xl shadow-2xl overflow-hidden mb-6">
                         <div className="bg-[#0A4ED5] px-6 py-6 flex flex-col items-center text-center text-white relative">
                             <h2 className="text-3xl font-black font-malayalam tracking-tight">താനൂർ <span className="text-brand-yellow">താരേ</span></h2>
@@ -723,19 +795,18 @@
                                 <div className="text-center">
                                     <p className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-1">Location</p>
                                     <p className="text-base font-bold text-gray-800">{data.houseName}, {data.place}</p>
-                                    <p className="text-sm font-semibold text-gray-500">{data.panchayat}</p>
+                                    <p className="text-sm font-light text-gray-500">{data.panchayat}</p>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    {/* Actions */}
                     <div className="flex flex-col sm:flex-row justify-center gap-3 pdf-hide">
-                        <Button onClick={handleShareWhatsApp} className="w-full bg-[#25D366] hover:bg-[#128C7E] text-white" disabled={isSharing}>
+                        <Button onClick={handleShareWhatsApp} className="w-full bg-[#25D366] hover:bg-[#128C7E] text-white font-bold" disabled={isSharing}>
                             {isSharing ? <i className="ph-fill ph-spinner-gap animate-spin text-2xl"></i> : <i className="ph-fill ph-whatsapp-logo text-2xl"></i>}
                             {isSharing ? 'Preparing...' : 'Share Pass'}
                         </Button>
-                        <Button onClick={handleDownloadPDF} variant="secondary" className="w-full">
+                        <Button onClick={handleDownloadPDF} variant="secondary" className="w-full font-bold">
                             <i className="ph-bold ph-download-simple text-xl"></i> Save PDF
                         </Button>
                     </div>
@@ -843,7 +914,7 @@
                                 className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-blue/30 font-medium text-sm"
                             />
                         </div>
-                        <Button onClick={exportExcel} className="w-full sm:w-auto py-2.5 px-4 bg-green-500 text-white shadow-none text-sm">
+                        <Button onClick={exportExcel} className="w-full sm:w-auto py-2.5 px-4 bg-green-500 text-white shadow-none text-sm font-bold">
                             <i className="ph-bold ph-download-simple"></i> Export Excel
                         </Button>
                     </div>
@@ -887,14 +958,23 @@
         const AdminAttendance = ({ data, refreshData }) => {
             const [query, setQuery] = useState('');
             const [toast, setToast] = useState(null);
+            const [scannedStudent, setScannedStudent] = useState(null);
             const scannerRef = useRef(null);
+            const isProcessingRef = useRef(false);
 
             useEffect(() => {
-                const scanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: {width: 250, height: 250} }, false);
+                const scanner = new Html5QrcodeScanner("reader", { 
+                    fps: 10, 
+                    qrbox: {width: 250, height: 250},
+                    supportedScanTypes: [0]
+                }, false);
                 scannerRef.current = scanner;
                 
                 scanner.render((decodedText) => {
-                    handleMark(decodedText);
+                    if (!isProcessingRef.current) {
+                        isProcessingRef.current = true;
+                        handleMark(decodedText);
+                    }
                 }, (error) => {});
 
                 return () => {
@@ -902,41 +982,61 @@
                 };
             }, [data]);
 
-            const handleMark = async (searchStr) => {
+            const handleMark = (searchStr) => {
                 const reg = data.find(r => r.regId === searchStr || r.phone === searchStr);
                 if (!reg) {
                     setToast({ message: 'Not found: ' + searchStr, type: 'error' });
-                } else if (reg.status === 'Attended') {
-                    setToast({ message: `${reg.name} already attended`, type: 'info' });
+                    setTimeout(() => { isProcessingRef.current = false; }, 2000); 
                 } else {
-                    await MOCK_DB.markAttended([reg.regId]);
-                    setToast({ message: `Marked: ${reg.name} (${reg.regId})`, type: 'success' });
+                    setScannedStudent(reg);
                     setQuery('');
-                    refreshData();
                 }
             };
 
+            const confirmAttendance = async () => {
+                if (!scannedStudent) return;
+                await MOCK_DB.markAttended([scannedStudent.regId]);
+                setToast({ message: `Successfully attended: ${scannedStudent.name}`, type: 'success' });
+                refreshData();
+                setScannedStudent(null);
+                setTimeout(() => { isProcessingRef.current = false; }, 1000);
+            };
+
+            const cancelAttendance = () => {
+                setScannedStudent(null);
+                setTimeout(() => { isProcessingRef.current = false; }, 500);
+            };
+
             return (
-                <div className="p-6 animate-fade-in">
+                <div className="p-6 animate-fade-in relative h-full">
                     {toast && <Toast {...toast} onClose={() => setToast(null)} />}
                     <h2 className="text-2xl font-black text-brand-text mb-6">Attendance Scanner</h2>
                     
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
                             <h3 className="font-bold mb-4 text-brand-text"><i className="ph-bold ph-camera"></i> Scan QR Code</h3>
-                            <div id="reader" className="rounded-xl overflow-hidden border-2 border-gray-100"></div>
+                            <div id="reader" className="rounded-xl overflow-hidden border-2 border-gray-100 relative"></div>
+                            {isProcessingRef.current && !scannedStudent && (
+                                <p className="text-center text-sm text-brand-blue font-bold mt-2 animate-pulse">Processing...</p>
+                            )}
                         </div>
 
                         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
                             <h3 className="font-bold mb-4 text-brand-text"><i className="ph-bold ph-keyboard"></i> Manual Entry</h3>
-                            <form onSubmit={(e) => { e.preventDefault(); handleMark(query); }}>
+                            <form onSubmit={(e) => { 
+                                e.preventDefault(); 
+                                if(!isProcessingRef.current) {
+                                    isProcessingRef.current = true;
+                                    handleMark(query); 
+                                }
+                            }}>
                                 <input 
                                     type="text" 
                                     value={query} onChange={e => setQuery(e.target.value)}
                                     placeholder="Enter Reg ID (e.g. TT10-001) or Phone" 
                                     className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3.5 mb-4 font-bold text-center uppercase focus:outline-none focus:ring-2 focus:ring-brand-blue"
                                 />
-                                <Button type="submit" className="w-full py-3.5 text-base">Mark Attended</Button>
+                                <Button type="submit" className="w-full py-3.5 text-base font-bold">Find Student</Button>
                             </form>
                             
                             <div className="mt-8">
@@ -955,12 +1055,61 @@
                             </div>
                         </div>
                     </div>
+
+                    {scannedStudent && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 animate-fade-in backdrop-blur-sm">
+                            <div className="bg-white rounded-2xl p-6 w-full max-w-sm text-center shadow-2xl relative overflow-hidden">
+                                
+                                <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-blue-100">
+                                    <i className="ph-fill ph-user text-4xl text-brand-blue"></i>
+                                </div>
+                                
+                                <h3 className="text-2xl font-black text-brand-text mb-1">{scannedStudent.name}</h3>
+                                <p className="text-lg font-mono font-bold text-gray-500 mb-4">{scannedStudent.regId}</p>
+                                
+                                <div className="grid grid-cols-2 gap-3 mb-6 text-left bg-gray-50 p-4 rounded-xl">
+                                    <div>
+                                        <p className="text-xs text-gray-400 font-bold uppercase mb-1">Category</p>
+                                        <p className="font-bold text-sm text-gray-800">{scannedStudent.category}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-gray-400 font-bold uppercase mb-1">Phone</p>
+                                        <p className="font-bold text-sm text-gray-800">{scannedStudent.phone}</p>
+                                    </div>
+                                    <div className="col-span-2">
+                                        <p className="text-xs text-gray-400 font-bold uppercase mb-1">Location</p>
+                                        <p className="font-bold text-sm text-gray-800">{scannedStudent.panchayat}</p>
+                                    </div>
+                                </div>
+
+                                {scannedStudent.status === 'Attended' ? (
+                                    <div className="mb-6 p-3 bg-yellow-50 border border-yellow-200 rounded-xl">
+                                        <p className="text-yellow-700 font-bold flex items-center justify-center gap-2">
+                                            <i className="ph-fill ph-warning-circle text-xl"></i> Already Attended
+                                        </p>
+                                    </div>
+                                ) : null}
+
+                                <div className="flex gap-3">
+                                    <Button onClick={cancelAttendance} variant="secondary" className="flex-1 bg-gray-100 text-gray-600 hover:bg-gray-200 py-3 shadow-none">
+                                        Cancel
+                                    </Button>
+                                    <Button 
+                                        onClick={confirmAttendance} 
+                                        disabled={scannedStudent.status === 'Attended'}
+                                        className="flex-1 bg-brand-success hover:bg-green-600 text-white py-3 shadow-lg shadow-green-200 disabled:bg-gray-300"
+                                    >
+                                        Attend
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             );
         };
 
         const AdminLayout = ({ children, setView, activeTab, setActiveTab }) => {
-            // Apply admin specific styling class to body
             useEffect(() => {
                 document.body.classList.add('admin-layout');
                 return () => document.body.classList.remove('admin-layout');
