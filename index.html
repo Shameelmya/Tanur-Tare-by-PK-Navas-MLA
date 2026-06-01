@@ -163,6 +163,7 @@
 
         // Live Database Synced with Google Sheets (Falls back to Mock Data if URL fails)
         const MOCK_DB = {
+            adminPassword: '',
             registrations: [
                 {
                     regId: "TT10001",
@@ -183,7 +184,7 @@
                     timestamp: new Date().toISOString()
                 }
             ],
-            counters: { 'SSLC': 1, 'Plus Two': 0, 'LSS': 0, 'USS': 0, 'NMMS': 0, 'CBSE 10': 0 },
+            counters: { 'SSLC': 1, 'Plus Two': 0, 'Plus 2 (CBSE)': 0, 'LSS': 0, 'USS': 0, 'NMMS': 0, 'CBSE 10': 0 },
             
             async saveRegistration(data) {
                 this.counters[data.category] = (this.counters[data.category] || 0) + 1;
@@ -192,6 +193,7 @@
                 let prefix = '';
                 if(data.category === 'SSLC') prefix = 'TT10';
                 else if(data.category === 'Plus Two') prefix = 'TT12';
+                else if(data.category === 'Plus 2 (CBSE)') prefix = 'TTP';
                 else if(data.category === 'LSS') prefix = 'TTL';
                 else if(data.category === 'USS') prefix = 'TTU';
                 else if(data.category === 'NMMS') prefix = 'TTN';
@@ -224,13 +226,16 @@
             async getRegistrations() {
                 if (GOOGLE_SHEET_WEB_APP_URL && GOOGLE_SHEET_WEB_APP_URL.startsWith("http")) {
                     try {
-                        const response = await fetch(GOOGLE_SHEET_WEB_APP_URL);
+                        const response = await fetch(GOOGLE_SHEET_WEB_APP_URL, {
+                            method: "POST",
+                            body: JSON.stringify({ action: "getAll", password: this.adminPassword })
+                        });
                         const serverData = await response.json();
                         if (Array.isArray(serverData)) {
                             this.registrations = serverData;
                             
                             // Re-calculate the registration category counters dynamically from sheet data
-                            const freshCounters = { 'SSLC': 0, 'Plus Two': 0, 'LSS': 0, 'USS': 0, 'NMMS': 0, 'CBSE 10': 0 };
+                            const freshCounters = { 'SSLC': 0, 'Plus Two': 0, 'Plus 2 (CBSE)': 0, 'LSS': 0, 'USS': 0, 'NMMS': 0, 'CBSE 10': 0 };
                             serverData.forEach(item => {
                                 if (freshCounters[item.category] !== undefined) {
                                     freshCounters[item.category]++;
@@ -246,11 +251,25 @@
             },
 
             async searchRegistration(criteria) {
-                const dataset = await this.getRegistrations();
+                if (GOOGLE_SHEET_WEB_APP_URL && GOOGLE_SHEET_WEB_APP_URL.startsWith("http")) {
+                    try {
+                        const response = await fetch(GOOGLE_SHEET_WEB_APP_URL, {
+                            method: "POST",
+                            body: JSON.stringify({ action: "search", criteria: criteria })
+                        });
+                        const serverData = await response.json();
+                        if (serverData && !serverData.error) return serverData;
+                        return null; // Don't fallback if the API securely returned null
+                    } catch (e) {
+                        console.error("Search failed", e);
+                    }
+                }
+
+                // Fallback to local session data if totally offline
                 if (criteria.regId) {
-                    return dataset.find(r => String(r.regId).toLowerCase() === criteria.regId.toLowerCase());
+                    return this.registrations.find(r => String(r.regId).toLowerCase() === criteria.regId.toLowerCase());
                 } else if (criteria.name && criteria.phone) {
-                    return dataset.find(r => 
+                    return this.registrations.find(r => 
                         String(r.name).toLowerCase().includes(criteria.name.toLowerCase()) && 
                         String(r.phone) === criteria.phone
                     );
@@ -267,6 +286,7 @@
                                 method: "POST",
                                 body: JSON.stringify({
                                     action: "updateStatus",
+                                    password: this.adminPassword,
                                     regId: id,
                                     status: "Attended",
                                     attendanceTime: time
@@ -298,6 +318,7 @@
                             method: "POST",
                             body: JSON.stringify({
                                 action: "updateStatus",
+                                password: this.adminPassword,
                                 regId: regId,
                                 status: nextStatus,
                                 attendanceTime: time
@@ -611,7 +632,8 @@
                         newData.whatsapp = value;
                     }
                     if (name === 'category') {
-                        if ((value === 'Plus Two' || value === 'CBSE 10' || value === 'SSLC') && parseInt(newData.aPlus) > 10) {
+                        const max = (value === 'Plus Two' || value === 'CBSE 10') ? 6 : 10;
+                        if ((value === 'Plus Two' || value === 'CBSE 10' || value === 'SSLC' || value === 'Plus 2 (CBSE)') && parseInt(newData.aPlus) > max) {
                             newData.aPlus = '';
                         }
                     }
@@ -738,7 +760,7 @@
                             <div className="md:col-span-2 mt-2" id="category-section">
                                 <label className={`${labelClasses} font-semibold`}>Category <span className="text-red-400">*</span></label>
                                 <div className={`grid grid-cols-2 sm:grid-cols-3 gap-2.5 p-2 rounded-xl transition-all duration-300 ${submitAttempted && !formData.category ? 'bg-red-500/20 border-2 border-red-400 shadow-[0_0_20px_rgba(239,68,68,0.4)]' : 'border-2 border-transparent'}`}>
-                                    {['SSLC', 'Plus Two', 'LSS', 'USS', 'NMMS', 'CBSE 10'].map(cat => (
+                                    {['SSLC', 'Plus Two', 'Plus 2 (CBSE)', 'LSS', 'USS', 'NMMS', 'CBSE 10'].map(cat => (
                                         <label key={cat} className={`flex items-center justify-center py-3 rounded-xl cursor-pointer transition-all border ${formData.category === cat ? 'bg-brand-yellow border-brand-yellow text-[#0838A8] font-bold shadow-md' : 'bg-white/10 border-white/20 text-white hover:bg-white/20 font-light'}`}>
                                             <input type="radio" name="category" value={cat} checked={formData.category === cat} onChange={handleChange} className="opacity-0 absolute w-0 h-0" />
                                             {cat}
@@ -751,7 +773,7 @@
                                     </p>
                                 )}
                             </div>
-                            {(formData.category === 'SSLC' || formData.category === 'Plus Two' || formData.category === 'CBSE 10') && (
+                            {(formData.category === 'SSLC' || formData.category === 'Plus Two' || formData.category === 'CBSE 10' || formData.category === 'Plus 2 (CBSE)') && (
                                 <div className="animate-fade-in md:col-span-2">
                                     <label className={labelClasses}>{gradeLabel}</label>
                                     <select name="aPlus" required value={formData.aPlus} onChange={handleChange} className={`custom-select ${inputClasses}`}>
@@ -981,6 +1003,7 @@
                                 <option value="All">All Categories</option>
                                 <option value="SSLC">SSLC</option>
                                 <option value="Plus Two">Plus Two</option>
+                                <option value="Plus 2 (CBSE)">Plus 2 (CBSE)</option>
                                 <option value="LSS">LSS</option>
                                 <option value="USS">USS</option>
                                 <option value="NMMS">NMMS</option>
@@ -1442,15 +1465,28 @@
                 if (view === 'admin') fetchAdminData();
             }, [view, adminTab]);
 
-            const handleAdminLogin = (e) => {
+            const handleAdminLogin = async (e) => {
                 e.preventDefault();
-                if (password === 'ttad2026') {
-                    setView('admin');
-                    setShowPassword(false);
-                    setPassword('');
-                    setLoginError('');
-                } else {
-                    setLoginError("Incorrect Admin Password!");
+                setLoginError("Verifying with server...");
+                
+                try {
+                    const res = await fetch(GOOGLE_SHEET_WEB_APP_URL, {
+                        method: "POST",
+                        body: JSON.stringify({ action: "verifyPassword", password: password })
+                    });
+                    const data = await res.json();
+                    
+                    if (data.success) {
+                        MOCK_DB.adminPassword = password; // Save verified password for future admin queries
+                        setView('admin');
+                        setShowPassword(false);
+                        setPassword('');
+                        setLoginError('');
+                    } else {
+                        setLoginError("Incorrect Admin Password!");
+                    }
+                } catch(err) {
+                    setLoginError("Connection failed. Try again.");
                 }
             };
 
