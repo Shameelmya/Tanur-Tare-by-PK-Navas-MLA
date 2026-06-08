@@ -446,7 +446,10 @@
             );
         };
 
-        const HomeView = ({ setView, setShowPassword, showPassword, handleAdminLogin, password, setPassword, errorMsg, isRegistrationOpen }) => {
+        const HomeView = ({ 
+            setView, setShowPassword, showPassword, handleAdminLogin, password, setPassword, errorMsg, isRegistrationOpen,
+            showScannerAuth, setShowScannerAuth, handleScannerLogin, scannerPassword, setScannerPassword, scannerError
+        }) => {
             const mapUrl = "https://maps.app.goo.gl/EtN48oEttJG5S7BR6?g_st=aw";
 
             return (
@@ -505,10 +508,34 @@
                                     <p className="text-red-300 text-xs text-center font-bold">{errorMsg}</p>
                                 )}
                             </form>
+                        ) : showScannerAuth ? (
+                            <form onSubmit={handleScannerLogin} className="flex flex-col gap-2 bg-white/10 p-3 rounded-xl backdrop-blur-md border border-white/20 animate-fade-in w-full max-w-[280px]">
+                                <div className="flex gap-2">
+                                    <input 
+                                        type="password" 
+                                        value={scannerPassword}
+                                        onChange={(e) => setScannerPassword(e.target.value)}
+                                        placeholder="Scanner Password"
+                                        className="bg-white px-3 py-2 rounded-lg text-sm font-bold text-gray-800 outline-none flex-1"
+                                        autoFocus
+                                    />
+                                    <button type="submit" className="bg-brand-success text-white px-3 py-2 rounded-lg text-sm font-bold">Start</button>
+                                    <button type="button" onClick={() => setShowScannerAuth(false)} className="bg-red-500 text-white px-2 py-2 rounded-lg text-sm"><i className="ph-bold ph-x"></i></button>
+                                </div>
+                                {scannerError && (
+                                    <p className="text-red-300 text-xs text-center font-bold">{scannerError}</p>
+                                )}
+                            </form>
                         ) : (
-                            <button onClick={() => setShowPassword(true)} className="opacity-20 hover:opacity-100 text-white transition-opacity text-[10px] font-bold px-4 py-2 flex items-center gap-2">
-                                <i className="ph-bold ph-lock-key"></i> Admin Access
-                            </button>
+                            <div className="flex gap-4 opacity-50 hover:opacity-100 transition-opacity mt-4">
+                                <button onClick={() => setShowPassword(true)} className="text-white text-[11px] font-bold py-2 flex items-center gap-1.5 hover:text-brand-yellow">
+                                    <i className="ph-bold ph-lock-key text-sm"></i> Admin Panel
+                                </button>
+                                <span className="text-white/30 py-2">|</span>
+                                <button onClick={() => setShowScannerAuth(true)} className="text-white text-[11px] font-bold py-2 flex items-center gap-1.5 hover:text-brand-success">
+                                    <i className="ph-bold ph-qr-code text-sm"></i> Quick Scan
+                                </button>
+                            </div>
                         )}
                     </footer>
                 </div>
@@ -954,7 +981,6 @@
 
             return (
                 <div className="space-y-6 animate-fade-in p-6">
-
                     {/* NEW: REGISTRATION TOGGLE CONTROLS */}
                     <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                         <div>
@@ -1369,6 +1395,29 @@
             );
         };
 
+        const ScannerOnlyView = ({ data, refreshData, setView }) => {
+            useEffect(() => {
+                document.body.classList.add('admin-layout');
+                return () => document.body.classList.remove('admin-layout');
+            }, []);
+
+            return (
+                <div className="min-h-screen flex flex-col bg-[#F8FAFC]">
+                    <div className="h-16 flex items-center justify-between px-6 border-b border-gray-200 bg-white shadow-sm shrink-0">
+                        <h2 className="font-black text-brand-blue flex items-center gap-2">
+                            <i className="ph-bold ph-qr-code text-xl"></i> Quick Scanner Mode
+                        </h2>
+                        <button onClick={() => setView('home')} className="flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-red-500 hover:bg-red-50 transition-colors text-sm">
+                            <i className="ph-bold ph-sign-out"></i> Exit Scanner
+                        </button>
+                    </div>
+                    <main className="flex-1 overflow-y-auto">
+                        <AdminAttendance data={data} refreshData={refreshData} />
+                    </main>
+                </div>
+            );
+        };
+
         const AdminLayout = ({ children, setView, activeTab, setActiveTab, onRefresh }) => {
             const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -1426,11 +1475,17 @@
             const [regData, setRegData] = useState(null);
             const [adminData, setAdminData] = useState([]);
             const [adminTab, setAdminTab] = useState('dashboard');
+            
+            // Full Admin Auth State
             const [showPassword, setShowPassword] = useState(false);
             const [password, setPassword] = useState('');
             const [loginError, setLoginError] = useState('');
             
-            // NEW GLOBAL STATE: Controls if users can register from the Home Screen
+            // Scanner-Only Auth State
+            const [showScannerAuth, setShowScannerAuth] = useState(false);
+            const [scannerPassword, setScannerPassword] = useState('');
+            const [scannerError, setScannerError] = useState('');
+            
             const [isRegistrationOpen, setIsRegistrationOpen] = useState(true);
 
             useEffect(() => {
@@ -1442,8 +1497,9 @@
                 setAdminData(data);
             };
 
+            // Fetch data for BOTH admin and scanner-only views
             useEffect(() => {
-                if (view === 'admin') fetchAdminData();
+                if (view === 'admin' || view === 'scanner_only') fetchAdminData();
             }, [view, adminTab]);
 
             const handleAdminLogin = async (e) => {
@@ -1471,6 +1527,20 @@
                 }
             };
 
+            const handleScannerLogin = (e) => {
+                e.preventDefault();
+                if (scannerPassword === 'scan26') {
+                    // Set backend password reference just in case sync endpoints require it
+                    MOCK_DB.adminPassword = 'scan26'; 
+                    setView('scanner_only');
+                    setShowScannerAuth(false);
+                    setScannerPassword('');
+                    setScannerError('');
+                } else {
+                    setScannerError('Incorrect Scanner Password!');
+                }
+            };
+
             if (view === 'admin') {
                 return (
                     <AdminLayout setView={setView} activeTab={adminTab} setActiveTab={setAdminTab} onRefresh={fetchAdminData}>
@@ -1478,6 +1548,12 @@
                         {adminTab === 'registrations' && <AdminRegistrations data={adminData} refreshData={fetchAdminData} />}
                         {adminTab === 'attendance' && <AdminAttendance data={adminData} refreshData={fetchAdminData} />}
                     </AdminLayout>
+                );
+            }
+
+            if (view === 'scanner_only') {
+                return (
+                    <ScannerOnlyView data={adminData} refreshData={fetchAdminData} setView={setView} />
                 );
             }
 
@@ -1494,6 +1570,13 @@
                                 setPassword={setPassword}
                                 errorMsg={loginError}
                                 isRegistrationOpen={isRegistrationOpen}
+                                
+                                showScannerAuth={showScannerAuth}
+                                setShowScannerAuth={setShowScannerAuth}
+                                handleScannerLogin={handleScannerLogin}
+                                scannerPassword={scannerPassword}
+                                setScannerPassword={setScannerPassword}
+                                scannerError={scannerError}
                             />
                         )}
                         {view === 'search_pass' && <SearchPassView setView={setView} setRegData={setRegData} />}
