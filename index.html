@@ -981,7 +981,7 @@
 
             return (
                 <div className="space-y-6 animate-fade-in p-6">
-                    {/* NEW: REGISTRATION TOGGLE CONTROLS */}
+                    {/* REGISTRATION TOGGLE CONTROLS */}
                     <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                         <div>
                             <h3 className="font-bold text-brand-text flex items-center gap-2 text-lg">
@@ -1204,15 +1204,60 @@
                 };
             }, []);
 
-            const handleMark = (searchStr) => {
+            // FIXED BUG: Robust QR parsing + On-Demand live database fallback if local cache is empty
+            const handleMark = async (searchStr) => {
                 if (!searchStr) return;
                 
-                const cleanStr = String(searchStr).trim().toLowerCase();
+                let cleanStr = String(searchStr).trim();
                 
-                const reg = dataRef.current.find(r => 
+                // Matches standard pattern starting with 'TT' and extracts the clean Registration ID
+                const idMatch = cleanStr.match(/(TT[A-Z0-9]+)/i);
+                if (idMatch) {
+                    cleanStr = idMatch[0].toLowerCase();
+                } else {
+                    cleanStr = cleanStr.toLowerCase();
+                }
+                
+                // 1. Search Local Registry
+                let reg = dataRef.current.find(r => 
                     String(r.regId).toLowerCase() === cleanStr || 
                     String(r.phone) === cleanStr
                 );
+                
+                // 2. On-Demand Live DB Search (In case local data is out of sync or empty)
+                if (!reg && GOOGLE_SHEET_WEB_APP_URL && GOOGLE_SHEET_WEB_APP_URL.startsWith("http")) {
+                    try {
+                        setToast({ message: "Scanning database records...", type: "info" });
+                        
+                        const response = await fetch(GOOGLE_SHEET_WEB_APP_URL, {
+                            method: "POST",
+                            body: JSON.stringify({ 
+                                action: "search", 
+                                criteria: { regId: cleanStr.toUpperCase() } 
+                            })
+                        });
+                        const serverData = await response.json();
+                        
+                        if (serverData && !serverData.error) {
+                            reg = serverData;
+                        } else {
+                            // Fallback phone query if scanner was fed with a phone number
+                            const responsePhone = await fetch(GOOGLE_SHEET_WEB_APP_URL, {
+                                method: "POST",
+                                body: JSON.stringify({ 
+                                    action: "search", 
+                                    criteria: { phone: cleanStr } 
+                                })
+                            });
+                            const serverDataPhone = await responsePhone.json();
+                            if (serverDataPhone && !serverDataPhone.error) {
+                                reg = serverDataPhone;
+                            }
+                        }
+                    } catch (e) {
+                        console.error("Database query fallback failed:", e);
+                    }
+                }
                 
                 if (!reg) {
                     setToast({ message: 'No record found for: ' + String(searchStr).trim().toUpperCase(), type: 'error' });
